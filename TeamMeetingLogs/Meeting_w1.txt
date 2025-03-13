@@ -1,0 +1,30 @@
+Week 1 Meeting:
+1. Team Number: 1
+You have been assigned a team number, on Canvas, that is represented as your recitation section number plus a one-digit identifier. This team number MUST appear on ALL deliverables/submissions posted by your team to your git repository and to Canvas.
+
+2. Team name: CrossTune
+
+3. Team Members
+Shane Cao
+Github: Cao-Shane
+shca6876@colorado.edu
+
+James Bowen
+Github: jabo2204
+jabo2204@colorado.edu
+
+Kendrix Henderson
+Github: Jackkhuncho
+elhe7727@colorado.edu
+
+Renner Skidmore
+Github: rennerskidmore
+resk7605@colorado.edu
+
+4. Application Name
+Pick a befitting name to convey the purpose of your application. To be used in all presentations(weekly to your TA and the final one)
+
+5. Application Description
+A short (2-3 paragraphs) overview description of the application. Provide enough information to explain what functionality and value your product will provide to users of your application. This should help you to define the scope of your project.
+
+6. Audience
