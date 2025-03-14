@@ -1,0 +1,5 @@
+CREATE TABLE users (id SERIAL PRIMARY KEY, username VARCHAR(100) NOT NULL, password VARCHAR(100) NOT NULL);
+
+CREATE TABLE users_to_posts(user_id INT NOT NULL, post_id INT NOT NULL);
+
+CREATE TABLE posts(id SERIAL PRIMARY KEY, description VARCHAR(MAX) NOT NULL, duration SMALLINT NOT NULL, applelink VARCHAR(100) NOT NULL, spotLink VARCHAR(100) NOT NULL, upvotes INT);
