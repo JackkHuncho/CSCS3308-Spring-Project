@@ -2,7 +2,7 @@ Week 1 Meeting:
 1. Team Number: 1
 You have been assigned a team number, on Canvas, that is represented as your recitation section number plus a one-digit identifier. This team number MUST appear on ALL deliverables/submissions posted by your team to your git repository and to Canvas.
 
-2. Team name: CrossTune
+2. Team name: CrossTuners
 
 3. Team Members
 Shane Cao
@@ -22,9 +22,13 @@ Github: rennerskidmore
 resk7605@colorado.edu
 
 4. Application Name
-Pick a befitting name to convey the purpose of your application. To be used in all presentations(weekly to your TA and the final one)
+CrossTune
 
 5. Application Description
-A short (2-3 paragraphs) overview description of the application. Provide enough information to explain what functionality and value your product will provide to users of your application. This should help you to define the scope of your project.
+CrossTune makes it extremely simple to share Spotify and Apple Music playlists across platforms bridging the gap between 
+Spotify and Apple Music users. CrossTune allows its users to share their new playlists to other users with ease. 
+This application will convert cross platform playlists to their respective formats, ensuring that songs are matched 
+accurately between Spotify and Apple Music. Whether they’re discovering new music or sharing their favorite tracks with 
+friends, CrossTune makes the process seamless. 
 
 6. Audience
