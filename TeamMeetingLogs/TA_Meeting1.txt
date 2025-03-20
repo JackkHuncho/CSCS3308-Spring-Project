@@ -1,0 +1,36 @@
+3/20/2025
+
+Ian going over our lab 9
+- Wireframes are completed
+
+Main branch usage
+- Front end vs Partial
+- Ian mentioned front end branch isn't necessary
+- Main branch should be the main branch worked on
+- Completed code should be on main, partial changes should be pushed to main so everyone has access
+- Small things should be committed to side branch, once completed, can be pushed to main
+- Don't push code until it works
+
+- Front end branch merged with partial
+
+- Ian checking if we have working code
+ - Showed him through docker since we don't have a front end
+ - Need to show a working prototype
+ - Showing the 
+- Data model of tables
+ - User -> Username, Password, Playlist Linked, Songs in playlist (example)
+- Datatable not working (Need to get it done) 
+ - Points won't be lost b/c there was no communication for this week's TA Meeting
+
+- Plans for this week
+ - Front end
+ - Deliverables
+ - API
+ - Partials
+
+To Do:
+Case Diagrams (Due Friday 3/21)
+- Renner plans on doing this
+Submission (Due Friday 3/21)
+- Renner got this too
+Data Model (See Line 20)
