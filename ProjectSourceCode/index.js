@@ -58,13 +58,13 @@ app.set('views', path.join(__dirname, 'src', 'views'));
 app.use(bodyParser.json()); // specify the usage of JSON for parsing request body.
 
 // initialize session variables
-/*app.use(
+app.use(
   session({
     secret: process.env.SESSION_SECRET,
     saveUninitialized: false,
     resave: false,
   })
-);*/
+);
 
 app.use(
   bodyParser.urlencoded({
@@ -76,6 +76,21 @@ app.use(
 app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
 
 // we need to put auth middleware here
+// Authentication Middleware.
+const auth = (req, res, next) => {
+  const openRoutes = ['/login', '/register', '/home']; // Allowed pages
+  // Kendrix - we can change this to remove home later, but for now i have it available.
+  if (!req.session.user && !openRoutes.includes(req.path)) {
+    return res.redirect('/login');
+  }
+
+  // Make session data available globally in Handlebars
+  res.locals.user = req.session.user;
+  next();
+};
+
+
+app.use(auth);
 
 // *****************************************************
 // <!-- Section 4 : API Routes -->
@@ -97,9 +112,23 @@ app.get('/home', (req, res) => {
     res.render('pages/home');
 })
 
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+      if (err) {
+          console.error("Logout Error:", err);
+          return res.render('pages/home', { message: "Error logging out. Please try again." });
+      }
+      res.render('pages/login', { message: "Logged out successfully!" });
+  });
+});
+
 app.post('/register', async(req, res) =>{
   let data = req.body;
   try {
+    const validity = await db.query(`SELECT * FROM users WHERE username = '${data.username}'`);
+    if(validity){
+      return res.render('pages/register.hbs', { message: 'Username Already Taken' });
+    };
     const hash = await bcrypt.hash(req.body.password, 10);
     const query = `INSERT INTO users (username, password) VALUES ('${data.username}', '${hash}') RETURNING *`;
     const results = await db.oneOrNone(query);
@@ -136,6 +165,7 @@ app.post('/login', async(req, res) =>{
     res.status(501).send("Server Error");
   }
 });
+
 
 // *****************************************************
 // <!-- Section 5 : Start Server-->
