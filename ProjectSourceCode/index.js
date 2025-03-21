@@ -72,6 +72,9 @@ app.use(
   })
 );
 
+// Kendrix - this is for our css,
+app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
+
 // we need to put auth middleware here
 
 // *****************************************************
@@ -84,6 +87,54 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res)=> {
   res.render('pages/login', {pageTitle: 'Login'});
+});
+
+app.get('/register', (req,res) => {
+      res.render('pages/register');
+});
+
+app.get('/home', (req, res) => {
+    res.render('pages/home');
+})
+
+app.post('/register', async(req, res) =>{
+  let data = req.body;
+  try {
+    const hash = await bcrypt.hash(req.body.password, 10);
+    const query = `INSERT INTO users (username, password) VALUES ('${data.username}', '${hash}') RETURNING *`;
+    const results = await db.oneOrNone(query);
+    return res.redirect('/login');
+  } catch (err) {
+    return res.redirect('/register');
+  }
+});
+
+app.post('/login', async(req, res) =>{
+  const data = req.body;
+  const query = `SELECT * FROM users WHERE username = '${data.username}'`;
+  try {
+    const user = await db.oneOrNone(query);
+    if(!user){
+      return res.redirect('/register');
+    }
+
+      const match = await bcrypt.compare(data.password, user.password);  
+
+      if(!match){
+        return res.render('pages/login.hbs', { message: 'Incorrect Password or Username.' });
+      }
+
+
+      req.session.user = user;
+      req.session.save(() => {
+        res.redirect('/home');
+      });
+    
+
+  } catch (err) {
+    console.error(err);
+    res.status(501).send("Server Error");
+  }
 });
 
 // *****************************************************

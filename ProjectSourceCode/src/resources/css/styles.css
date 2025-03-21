@@ -1,0 +1,125 @@
+/* === General Page Styling === */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #001f3f, #003366);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === Navbar Fix: Make Sure It's Not Affected by Blur === */
+.navbar {
+    position: relative;
+    width: 100%;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8); /* Keeps it solid */
+    backdrop-filter: none; /* Prevents blur from affecting it */
+}
+
+/* === Centered Page Container === */
+.page-content {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding-top: 80px; /* Pushes form below navbar */
+}
+
+/* === Form Box (Only Affects Login/Register) === */
+.form-box {
+    background: rgba(255, 255, 255, 0.12);
+    padding: 30px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0px 0px 20px rgba(0, 123, 255, 0.4);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* === Improve Form Labels & Text === */
+label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+/* === Input Field Styles === */
+.input-animate {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 12px 15px; /* More padding inside the input */
+    width: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease-in-out;
+    margin-bottom: 15px; /* Spacing between inputs */
+}
+
+.input-animate::placeholder {
+    color: rgba(255, 255, 255, 0.7); /* Lighter placeholder text */
+}
+
+.input-animate:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.6);
+    outline: none;
+}
+
+/* === Button Animation === */
+.btn-animated {
+    width: 100%;
+    font-weight: bold;
+    border: none;
+    background: #007bff;
+    color: white;
+    padding: 14px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+    margin-top: 10px; /* Space between last input and button */
+}
+
+.btn-animated:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+    box-shadow: 0px 0px 15px rgba(0, 123, 255, 0.6);
+}
+
+/* === Link Styling === */
+.link-animate {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease-in-out;
+}
+
+.link-animate:hover {
+    color: #0056b3;
+}
+
+/* === Adjustments for Small Screens === */
+@media (max-width: 768px) {
+    .animated-title {
+        font-size: 2rem;
+    }
+
+    .form-box {
+        padding: 20px;
+    }
+
+    .btn-animated {
+        font-size: 1rem;
+        padding: 10px;
+    }
+}
+
+/* === Keyframes for Animations === */
+@keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
