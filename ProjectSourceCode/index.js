@@ -83,7 +83,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res)=> {
-  res.render('pages/login');
+  res.render('pages/login', {pageTitle: 'Login'});
 });
 
 // *****************************************************

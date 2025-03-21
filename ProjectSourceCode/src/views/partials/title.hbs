@@ -1,6 +1,2 @@
-{{! Kendrix - This code is functional but needs to be changed to adjust based upon the page the user is on}}
-{{#if user}}
-  <title> {{user.username}} CrossTune </title>
-  {{else}}
-  <title> CrossTune </title>
-{{/if}}
+{{! Kendrix - we need to pass pageTitle from every render for this to function}}
+<title>CrossTune – {{pageTitle}}</title>
