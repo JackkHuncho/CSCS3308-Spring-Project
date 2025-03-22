@@ -5,42 +5,36 @@
 const express = require('express'); // To build an application server or API
 const app = express();
 const handlebars = require('express-handlebars');
-const Handlebars = require('handlebars');
 const path = require('path');
 const pgp = require('pg-promise')(); // To connect to the Postgres DB from the node server
 const bodyParser = require('body-parser');
-const session = require('express-session'); // To set the session object. To store or access session data, use the `req.session`, which is (generally) serialized as JSON by the store.
-const bcrypt = require('bcryptjs'); //  To hash passwords
-const axios = require('axios'); // To make HTTP requests from our server. We'll learn more about it in Part C.
+const session = require('express-session'); // To set the session object
+const bcrypt = require('bcryptjs'); // To hash passwords
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
 // *****************************************************
 
-// create `ExpressHandlebars` instance and configure the layouts and partials dir.
 const hbs = handlebars.create({
   extname: 'hbs',
-  // kendrix - Adjusted directory so now our layouts and paritals work!
-  layoutsDir: __dirname + '/src/views/layouts',
-  partialsDir: __dirname + '/src/views/partials',
+  layoutsDir: path.join(__dirname, 'src', 'views', 'layouts'),
+  partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
 });
 
-// database configuration
 const dbConfig = {
-  host: 'db', // the database server
-  port: 5432, // the database port
-  database: process.env.POSTGRES_DB, // the database name
-  user: process.env.POSTGRES_USER, // the user account to connect with
-  password: process.env.POSTGRES_PASSWORD, // the password of the user account
+  host: 'db',
+  port: 5432,
+  database: process.env.POSTGRES_DB,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
 };
 
 const db = pgp(dbConfig);
 
-// test your database
 db.connect()
   .then(obj => {
-    console.log('Database connection successful'); // you can view this message in the docker compose logs
-    obj.done(); // success, release the connection;
+    console.log('Database connection successful');
+    obj.done();
   })
   .catch(error => {
     console.log('ERROR:', error.message || error);
@@ -50,14 +44,10 @@ db.connect()
 // <!-- Section 3 : App Settings -->
 // *****************************************************
 
-// Register `hbs` as our view engine using its bound `engine()` function.
 app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
-// Kendrix - Changed the path so that we are serachingin the correct directory.
 app.set('views', path.join(__dirname, 'src', 'views'));
-app.use(bodyParser.json()); // specify the usage of JSON for parsing request body.
-
-// initialize session variables
+app.use(bodyParser.json());
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -65,111 +55,75 @@ app.use(
     resave: false,
   })
 );
-
-app.use(
-  bodyParser.urlencoded({
-    extended: true,
-  })
-);
-
-// Kendrix - this is for our css,
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
 
-// we need to put auth middleware here
-// Authentication Middleware.
 const auth = (req, res, next) => {
-  const openRoutes = ['/login', '/register', '/home']; // Allowed pages
-  // Kendrix - we can change this to remove home later, but for now i have it available.
+  const openRoutes = ['/login', '/register', '/home'];
   if (!req.session.user && !openRoutes.includes(req.path)) {
     return res.redirect('/login');
   }
-
-  // Make session data available globally in Handlebars
   res.locals.user = req.session.user;
   next();
 };
-
-
 app.use(auth);
 
 // *****************************************************
 // <!-- Section 4 : API Routes -->
 // *****************************************************
 
-app.get('/', (req, res) => {
-    res.redirect('/login');
-});
-
-app.get('/login', (req, res)=> {
-  res.render('pages/login', {pageTitle: 'Login'});
-});
-
-app.get('/register', (req,res) => {
-      res.render('pages/register');
-});
-
-app.get('/home', (req, res) => {
-    res.render('pages/home');
-})
+app.get('/', (req, res) => res.redirect('/login'));
+app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }));
+app.get('/register', (req, res) => res.render('pages/register'));
+app.get('/home', (req, res) => res.render('pages/home'));
 
 app.get('/logout', (req, res) => {
-  req.session.destroy((err) => {
-      if (err) {
-          console.error("Logout Error:", err);
-          return res.render('pages/home', { message: "Error logging out. Please try again." });
-      }
-      res.render('pages/login', { message: "Logged out successfully!" });
+  req.session.destroy(err => {
+    if (err) {
+      console.error('Logout Error:', err);
+      return res.render('pages/home', { message: 'Error logging out. Please try again.' });
+    }
+    res.render('pages/login', { message: 'Logged out successfully!' });
   });
 });
 
-app.post('/register', async(req, res) =>{
-  let data = req.body;
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
   try {
-    const validity = await db.query(`SELECT * FROM users WHERE username = '${data.username}'`);
-    if(validity){
-      return res.render('pages/register.hbs', { message: 'Username Already Taken' });
-    };
-    const hash = await bcrypt.hash(req.body.password, 10);
-    const query = `INSERT INTO users (username, password) VALUES ('${data.username}', '${hash}') RETURNING *`;
-    const results = await db.oneOrNone(query);
+    const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
+    if (user) {
+      return res.render('pages/register', { message: 'Username Already Taken' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    await db.none('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hash]);
     return res.redirect('/login');
   } catch (err) {
-    return res.redirect('/register');
+    console.error('Registration Error:', err);
+    return res.render('pages/register', { message: 'Registration failed. Try again.' });
   }
 });
 
-app.post('/login', async(req, res) =>{
-  const data = req.body;
-  const query = `SELECT * FROM users WHERE username = '${data.username}'`;
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
   try {
-    const user = await db.oneOrNone(query);
-    if(!user){
-      return res.redirect('/register');
+    const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
+    if (!user) {
+      return res.render('pages/login', { message: 'Incorrect Username or Password.' });
     }
-
-      const match = await bcrypt.compare(data.password, user.password);  
-
-      if(!match){
-        return res.render('pages/login.hbs', { message: 'Incorrect Password or Username.' });
-      }
-
-
-      req.session.user = user;
-      req.session.save(() => {
-        res.redirect('/home');
-      });
-    
-
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.render('pages/login', { message: 'Incorrect Username or Password.' });
+    }
+    req.session.user = user;
+    req.session.save(() => res.redirect('/home'));
   } catch (err) {
-    console.error(err);
-    res.status(501).send("Server Error");
+    console.error('Login Error:', err);
+    res.status(500).render('pages/login', { message: 'Server Error. Try again later.' });
   }
 });
 
+// *****************************************************
+// <!-- Section 5 : Start Server -->
+// *****************************************************
 
-// *****************************************************
-// <!-- Section 5 : Start Server-->
-// *****************************************************
-// starting the server and keeping the connection open to listen for more requests
-app.listen(3000);
-console.log('Server is listening on port 3000');
+app.listen(3000, () => console.log('Server is listening on port 3000'));
