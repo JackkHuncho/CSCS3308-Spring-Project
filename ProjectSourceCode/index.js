@@ -123,7 +123,48 @@ app.post('/login', async (req, res) => {
 });
 
 // *****************************************************
-// <!-- Section 5 : Start Server -->
+// <!-- Section 5 : Settings Page -->
+// *****************************************************
+
+app.get('/settings', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.render('pages/settings', { user: req.session.user });
+});
+
+app.post('/settings', async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  const { username, bio } = req.body;
+  try {
+    const updatedUser = await db.one(
+      'UPDATE users SET username = $1, bio = $2 WHERE id = $3 RETURNING *',
+      [username, bio, req.session.user.id]
+    );
+    req.session.user = updatedUser;
+    res.redirect('/settings');
+  } catch (err) {
+    console.error('Settings Update Error:', err);
+    res.render('pages/settings', { user: req.session.user, message: 'Error updating settings.' });
+  }
+});
+
+// *****************************************************
+// <!-- Section 6 : Profile Page -->
+// *****************************************************
+
+app.get('/profile', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.render('pages/profile', { user: req.session.user });
+});
+
+// *****************************************************
+// <!-- Section 7 : Start Server -->
 // *****************************************************
 
 app.listen(3000, () => console.log('Server is listening on port 3000'));
