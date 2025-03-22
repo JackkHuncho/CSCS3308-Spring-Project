@@ -10,6 +10,8 @@ const pgp = require('pg-promise')(); // To connect to the Postgres DB from the n
 const bodyParser = require('body-parser');
 const session = require('express-session'); // To set the session object
 const bcrypt = require('bcryptjs'); // To hash passwords
+const fs = require('fs'); // for reading files like images
+const multer = require('multer'); // Kendrix - added multer to simplify file parsing
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
@@ -48,6 +50,9 @@ app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -55,8 +60,8 @@ app.use(
     resave: false,
   })
 );
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
+
+const upload = multer(); // Kendrix - multer handles multipart/form-data file uploads
 
 const auth = (req, res, next) => {
   const openRoutes = ['/login', '/register', '/home'];
@@ -69,12 +74,19 @@ const auth = (req, res, next) => {
 app.use(auth);
 
 // *****************************************************
-// <!-- Section 4 : API Routes -->
+// <!-- Section 5 : API Routes -->
 // *****************************************************
 
+//kendrix - lets try and keep routes organized by post, get, etc...
+
+// =================== GET ROUTES ===================
+
 app.get('/', (req, res) => res.redirect('/login'));
+
 app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }));
+
 app.get('/register', (req, res) => res.render('pages/register'));
+
 app.get('/home', (req, res) => res.render('pages/home'));
 
 app.get('/logout', (req, res) => {
@@ -87,6 +99,42 @@ app.get('/logout', (req, res) => {
   });
 });
 
+app.get('/settings', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.render('pages/settings', { user: req.session.user });
+});
+
+app.get('/profile', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.render('pages/profile', { user: req.session.user });
+});
+
+app.get('/pfp/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const user = await db.oneOrNone('SELECT pfp FROM users WHERE username = $1', [username]);
+
+    if (!user || !user.pfp) {
+      return res.status(404).send('No Profile Picture Found');
+    }
+
+    res.set('Content-Type', 'image/png');
+    res.send(user.pfp);
+
+    console.log('Serving PFP for:', username, '| Size:', user.pfp.length);
+  } catch (err) {
+    console.error('Error retrieving image:', err);
+    res.status(500).send('Error retrieving image');
+  }
+});
+
+// =================== POST ROUTES ===================
+
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -94,8 +142,16 @@ app.post('/register', async (req, res) => {
     if (user) {
       return res.render('pages/register', { message: 'Username Already Taken' });
     }
+
     const hash = await bcrypt.hash(password, 10);
-    await db.none('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hash]);
+    const defaultImagePath = path.join(__dirname, 'src', 'resources', 'img', 'Defaultpfp.png');
+    const defaultImage = fs.readFileSync(defaultImagePath);
+
+    await db.none(
+      'INSERT INTO users (username, password, pfp) VALUES ($1, $2, $3)',
+      [username, hash, defaultImage]
+    );
+
     return res.redirect('/login');
   } catch (err) {
     console.error('Registration Error:', err);
@@ -110,10 +166,13 @@ app.post('/login', async (req, res) => {
     if (!user) {
       return res.render('pages/login', { message: 'Incorrect Username or Password.' });
     }
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.render('pages/login', { message: 'Incorrect Username or Password.' });
     }
+
+    user.pfp = `/pfp/${user.username}`; // Kendrix - serve image from dynamic route
     req.session.user = user;
     req.session.save(() => res.redirect('/home'));
   } catch (err) {
@@ -122,45 +181,47 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// *****************************************************
-// <!-- Section 5 : Settings Page -->
-// *****************************************************
-
-app.get('/settings', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
-  }
-  res.render('pages/settings', { user: req.session.user });
-});
-
-app.post('/settings', async (req, res) => {
+app.post('/settings', upload.single('pfp'), async (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login');
   }
 
-  const { username, bio } = req.body;
   try {
+    const username = req.body.username || req.session.user.username;
+    const newPassword = req.body.password;
+    const pfpBuffer = req.file ? req.file.buffer : req.session.user.pfp;
+
+    let passwordToSave;
+    if (newPassword) {
+      passwordToSave = await bcrypt.hash(newPassword, 10);
+    } else {
+      passwordToSave = req.session.user.password;
+    }
+
+    // Update user in DB
     const updatedUser = await db.one(
-      'UPDATE users SET username = $1, bio = $2 WHERE id = $3 RETURNING *',
-      [username, bio, req.session.user.id]
+      `UPDATE users 
+       SET username = $1, password = $2, pfp = $3 
+       WHERE id = $4 
+       RETURNING *`,
+      [username, passwordToSave, pfpBuffer, req.session.user.id]
     );
+
+    // Update session with fresh values
+    updatedUser.pfp = `/pfp/${updatedUser.username}`; // Kendrix - convert buffer to image URL again
     req.session.user = updatedUser;
-    res.redirect('/settings');
+
+    res.render('pages/settings', {
+      user: req.session.user,
+      message: 'Settings updated successfully!',
+    });
   } catch (err) {
     console.error('Settings Update Error:', err);
-    res.render('pages/settings', { user: req.session.user, message: 'Error updating settings.' });
+    res.render('pages/settings', {
+      user: req.session.user,
+      message: 'Error updating settings. Try again.',
+    });
   }
-});
-
-// *****************************************************
-// <!-- Section 6 : Profile Page -->
-// *****************************************************
-
-app.get('/profile', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
-  }
-  res.render('pages/profile', { user: req.session.user });
 });
 
 // *****************************************************
