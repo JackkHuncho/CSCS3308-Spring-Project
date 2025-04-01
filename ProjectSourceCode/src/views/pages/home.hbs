@@ -6,6 +6,13 @@
   <p class="text-white">Welcome, {{user.username}}!</p>
   <a href="https://accounts.spotify.com/authorize?client_id=8ef1441e15bc40f1920fd58477d8a01d&response_type=code&redirect_uri=http://localhost:3000/callback&scope=user-read-private user-read-email">Connect with Spotify</a>
 
+  <form action="/search-playlist" method="POST" class="mt-3">
+    <div class="form-group">
+      <label for="playlistTitle" class="text-white">Search My Spotify Playlists:</label>
+      <input type="text" id="playlistTitle" name="playlistTitle" class="form-control input-animate" placeholder="Enter playlist title" required />
+    </div>
+    <button type="submit" class="btn btn-primary btn-animated mt-2">Search Playlist</button>
+  </form>
 {{else}}
   <p class="text-white"> You are not logged in.</p>
 {{/if}}

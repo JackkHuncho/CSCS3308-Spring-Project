@@ -113,8 +113,10 @@ app.get('/callback', async (req, res) => {
     });
 
     const userInfo = await userResponse.json();
-    console.log('Spotify User Info:', userInfo); // <- ✅ Your console.log
 
+    // save access token and URL
+    console.log('Spotify User Info:', userInfo); // <- ✅ Your console.log
+    req.session.spotifyAccessToken = accessToken;
     res.redirect('/home'); // or wherever you want to redirect
 
   } catch (error) {
@@ -176,6 +178,48 @@ app.get('/pfp/:username', async (req, res) => {
 });
 
 // =================== POST ROUTES ===================
+
+// Spotify Playlist post
+app.post('/search-playlist', async (req, res) => {
+  const { playlistTitle } = req.body;
+  const token = req.session.spotifyAccessToken;
+
+  if (!token) {
+    return res.render('pages/home', { message: 'You must connect to Spotify first.' });
+  }
+
+  try {
+    // Fetch user's playlists
+    const playlistResponse = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await playlistResponse.json();
+
+    console.log('Fetched Playlists:', data.items.map(p => p.name));
+
+    // Search for matching title
+    const match = data.items.find(p =>
+      p.name.toLowerCase().includes(playlistTitle.toLowerCase())
+    );
+    
+    if (!match) {
+      return res.render('pages/home', { message: 'Playlist not found.' });
+    }
+
+    console.log('Matched Playlist:', match); // ✅ Playlist info
+    return res.render('pages/home', {
+      message: `Playlist "${match.name}" found!`,
+      playlist: match
+    });
+
+  } catch (err) {
+    console.error('Error fetching playlists:', err);
+    return res.render('pages/home', { message: 'Something went wrong. Try again.' });
+  }
+});
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
