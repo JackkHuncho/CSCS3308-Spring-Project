@@ -81,6 +81,48 @@ app.use(auth);
 
 // =================== GET ROUTES ===================
 
+// SPOTIFY CALLBACK FUNCTION
+app.get('/callback', async (req, res) => {
+  const code = req.query.code;
+
+  try {
+    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: 'http://localhost:3000/callback'
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+    // Debugging
+    console.log('Token Data:', tokenData);
+
+    const accessToken = tokenData.access_token;
+
+    // Make request to get user info
+    const userResponse = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    const userInfo = await userResponse.json();
+    console.log('Spotify User Info:', userInfo); // <- ✅ Your console.log
+
+    res.redirect('/home'); // or wherever you want to redirect
+
+  } catch (error) {
+    console.error('Error during Spotify callback:', error);
+    res.status(500).send('Spotify authentication failed');
+  }
+});
+
 app.get('/', (req, res) => res.redirect('/login'));
 
 app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }));
