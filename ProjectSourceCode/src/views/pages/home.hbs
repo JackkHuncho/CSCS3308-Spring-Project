@@ -6,6 +6,7 @@
     border-radius: 10px;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 30px
   }
 
   #popup{
@@ -41,6 +42,8 @@
 {{/if}}
 <p class="text-white">this is the home page rn</p>
 {{#if user}}
+  <p class="text-white">Welcome, {{user.username}}!</p>
+
   <button id="openPopup" onclick="openPopup()">Post Playlist</button>
   <div id="popup-overlay" onclick="closePopup()"></div>
   <div id="popup">
@@ -49,7 +52,7 @@
     <button id="selectPlaylist">Select Playlist</button>
   </div>
 
-  <p class="text-white">Welcome, {{user.username}}!</p>
+  {{>playlist title="My Favorite Kendrick Songs" username="crosstuner" description="These are my top 3 Kendrick Lamar songs in no particular order."}}
 
   <script>
     function openPopup() {

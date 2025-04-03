@@ -1,0 +1,88 @@
+<style>
+    #playlistPost{
+        background: #224489;
+        display: grid;
+        padding: 20px;
+        margin-left: 300px;
+        margin-right: 300px;
+        margin-bottom: 50px;
+        box-shadow: -10px 10px 5px rgb(0 0 0 / 20%);
+    }
+
+    #Overview{
+        display: flex;
+        flex-direction:row;
+    }
+
+    #playlistImage{
+        max-width: 250px;
+    }
+
+    #playlistText{
+        margin-left: 50px;
+    }
+
+    #userInfo{
+        display: flex;
+        flex-direction: row;
+    }
+
+    #playlistProfilePic{
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        margin-right: 20px;
+    }
+
+    .collapsible{
+        margin-top: 20px;
+    }
+
+    .content {
+        padding: 0 18px;
+        background-color: #001f3f;
+        color: white;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+    }
+</style>
+
+<div id="playlistPost">
+    <div id="Overview">
+        <img id="playlistImage" src="https://media.pitchfork.com/photos/67a052cfe6fab0dec05148c1/1:1/w_5504,h_5504,c_limit/Kendrick-Lamar.jpeg" alt="Playlist Image">
+        <div id="playlistText">
+            <h1 class="text-white" id="playlistTitle">{{title}}</h1>
+            <div id="userInfo">
+                <img id="playlistProfilePic" src="https://us.images.westend61.de/0001023871pw/portrait-of-happy-man-listening-to-music-with-headphones-DIGF04872.jpg">
+                <h4 class="text-white" id="playlistUser">{{username}}</h4>
+            </div>
+            <p class="text-white" id="playlistDescription">{{description}}</p>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Playlist Songs</button>
+    <div class="content">
+        <ol>
+            {{> playlistSongs img="https://i.scdn.co/image/ab67616d00001e02d58e537cea05c2156792c53d" song="Sing About Me, I'm Dying of Thirst" artist="Kendrick Lamar" album="good kid, m.A.A.d city" time="12:03"}}
+            {{> playlistSongs img="https://i.guim.co.uk/img/static/sys-images/Guardian/Pix/pictures/2015/3/11/1426099817173/f1efb3f4-9a6d-4f78-8ca8-594ab646d198-bestSizeAvailable.jpeg?width=465&dpr=1&s=none&crop=none" song="Wesley's Theory" artist="Kendrick Lamar" album="To Pimp a Butterfly" time="4:47"}}
+            {{> playlistSongs img="https://i.guim.co.uk/img/static/sys-images/Guardian/Pix/pictures/2015/3/11/1426099817173/f1efb3f4-9a6d-4f78-8ca8-594ab646d198-bestSizeAvailable.jpeg?width=465&dpr=1&s=none&crop=none" song="Hood Politics" artist="Kendrick Lamar" album="To Pimp a Butterfly" time="4:52"}}
+        </ol>
+    </div>
+
+    <script>
+        var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.maxHeight){
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                }
+            });
+        }
+    </script>
+</div>
