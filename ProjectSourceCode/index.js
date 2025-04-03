@@ -81,7 +81,7 @@ app.use(auth);
 
 // =================== GET ROUTES ===================
 
-// SPOTIFY CALLBACK FUNCTION
+// SPOTIFY CALLBACK FUNCTION - Renner
 app.get('/callback', async (req, res) => {
   const code = req.query.code;
 
@@ -204,7 +204,7 @@ app.post('/search-playlist', async (req, res) => {
     const match = data.items.find(p =>
       p.name.toLowerCase().includes(playlistTitle.toLowerCase())
     );
-    
+
     if (!match) {
       return res.render('pages/home', { message: 'Playlist not found.' });
     }
