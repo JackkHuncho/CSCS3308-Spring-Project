@@ -1,0 +1,18 @@
+4/3/25
+
+Went over what each member did
+Kendrix - Front End - Database + Registration/Login
+Shane - Settings, Profile, Registration Fix
+Renner - Spotify API 
+James - Playlist Post Template + Wireframse
+
+Went over project board and how each story related to what each member did (See previous)
+
+Went over what each member plans on doing
+Shane - Post Function + Profile database (Ian mentioned may need an async code to get it to work)
+Kendrix - Test  branch for apple (Apple API without needing the Apple paywall) + Middleman between APIs and Front-End
+Renner - Continue Spotify API
+James - Assist Shane w/ Post Function
+
+Ian mentioned that we have 30s to allocate stuff so the download maty take longer than expected.
+Potential grant from the school involving the Apple Paywall
