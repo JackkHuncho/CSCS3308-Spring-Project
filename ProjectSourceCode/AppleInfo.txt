@@ -1,0 +1,3 @@
+Apple Team ID:
+Apple Key ID: K3WR5JPV43
+AuthKey_K3WR5JPV43.p8 file is currently in ProjectSourceCode directory - will be moved as needed
