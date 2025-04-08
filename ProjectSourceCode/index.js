@@ -143,7 +143,7 @@ app.post('/register', async (req, res) => {
     // Check if username already exists
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (user) {
-      return res.status(409).json({ message: 'Username already exists' });
+      return res.status(409).render('pages/register').json({ message: 'Username already exists' });
     }
 
     // Hash the password and store a default profile picture
@@ -158,7 +158,7 @@ app.post('/register', async (req, res) => {
     return res.status(200).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error('Registration Error:', err);
-    return res.status(500).json({ message: 'Registration failed due to an internal error.' });
+    return res.status(500).render('pages/register').json({ message: 'Registration failed due to an internal error.' });
   }
 });
 
