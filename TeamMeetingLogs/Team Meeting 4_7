@@ -1,0 +1,18 @@
+
+Team Meeting 4/7
+
+Shane went over the test cases for lab 11 regarding register
+ - Issue with a black page with the registration failed message popping up instead of the usual red error popup message
+ - All 3 test cases are working besides that
+ - Will ensure lab 11 gets turned in with everything
+
+James will be working on Part C on lab 11 to complete the 2 more test cases
+
+Renner went over concerns regarding Apple API
+ - Apple doesn't allow for authentication even with the developer access (a lot different than Spotify)
+ - Will need to look into a work around, potentially consult Ian
+
+Spotifiy Playlist Implementation
+ - Intent is to be able to display the playlist onto the home page
+ - Shane/James will work on this if there's time
+ - spotify developer potential issue: contact Renner
