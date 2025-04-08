@@ -1,3 +1,5 @@
-Apple Team ID:
+Apple Team ID: 8VPB777JN3
 Apple Key ID: K3WR5JPV43
 AuthKey_K3WR5JPV43.p8 file is currently in ProjectSourceCode directory - will be moved as needed
+
+My Apple Developer Token: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkszV1I1SlBWNDMifQ.eyJpYXQiOjE3NDQwNjY0ODEsImV4cCI6MTc1OTYxODQ4MSwiaXNzIjoiOFZQQjc3N0pOMyJ9.SiHzOmqATi0X4n9R5LFS5nGF73lot-URCUVMNCIkwBsD4MptM5tQKfGrjTkCBnxymEV8yddsdxkIhX6zfIChwQ
