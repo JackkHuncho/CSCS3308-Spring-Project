@@ -37,7 +37,7 @@ describe('Testing Register API', () => {
       .request(server)
       .post('/register')
       .send({
-        username: '431',
+        username: 'tessss',
         password: 'Test@1234'
       })
       .end((err, res) => {
