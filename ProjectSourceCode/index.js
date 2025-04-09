@@ -14,6 +14,12 @@ const fs = require('fs'); // for reading files like images
 const multer = require('multer'); // Kendrix - added multer to simplify file parsing
 
 // *****************************************************
+// <!-- Apple Dependencies Import -->
+require('dotenv').config();
+const fetch = require('node-fetch');
+// ******************************************************
+
+// *****************************************************
 // <!-- Section 2 : Connect to DB -->
 // *****************************************************
 
@@ -64,7 +70,15 @@ app.use(
 const upload = multer(); // Kendrix - multer handles multipart/form-data file uploads
 
 const auth = (req, res, next) => {
-  const openRoutes = ['/login', '/register', '/home'];
+  const openRoutes = [
+    '/login',
+    '/register',
+    '/home',
+    '/connect-spotify',
+    '/spotify-callback',
+    '/apple-token',
+    '/apple-user-token'
+  ];
   if (!req.session.user && !openRoutes.includes(req.path)) {
     return res.redirect('/login');
   }
@@ -80,6 +94,67 @@ app.use(auth);
 //kendrix - lets try and keep routes organized by post, get, etc...
 
 // =================== GET ROUTES ===================
+  // ----------- API SPOTIFY AND APPLE GET ROUTES
+  app.get('/apple-token', (req, res) => {
+    const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
+    res.json({ token: developerToken });
+  });
+
+  app.get('/connect-spotify', (req, res) => {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const redirectUri = 'http://localhost:3000/spotify-callback';
+    const scope = 'playlist-read-private playlist-read-collaborative';
+  
+    const authURL = `https://accounts.spotify.com/authorize?` +
+      new URLSearchParams({
+        client_id: clientId,
+        response_type: 'code',
+        redirect_uri: redirectUri,
+        scope
+      });
+  
+    res.redirect(authURL);
+  });
+
+  app.get('/spotify-callback', async (req, res) => {
+    const code = req.query.code;
+  
+    try {
+      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: 'http://localhost:3000/spotify-callback'
+        })
+      });
+  
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+  
+      // Fetch Spotify user info (optional)
+      const userResponse = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+  
+      const userInfo = await userResponse.json();
+      console.log('Spotify User Info:', userInfo);
+  
+      req.session.spotifyAccessToken = accessToken;
+      req.session.successMessage = 'Successfully connected to Spotify!';
+      res.redirect('/home');
+    } catch (error) {
+      console.error('Error during Spotify callback:', error);
+      res.status(500).send('Spotify authentication failed');
+    }
+  });  
+  
 
 app.get('/', (req, res) => res.redirect('/login'));
 
@@ -87,7 +162,12 @@ app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }
 
 app.get('/register', (req, res) => res.render('pages/register'));
 
-app.get('/home', (req, res) => res.render('pages/home'));
+app.get('/home', (req, res) => {
+  const message = req.session.successMessage;
+  delete req.session.successMessage;
+
+  res.render('pages/home', { message });
+});
 
 app.get('/logout', (req, res) => {
   req.session.destroy(err => {
@@ -134,6 +214,142 @@ app.get('/pfp/:username', async (req, res) => {
 });
 
 // =================== POST ROUTES ===================
+
+  // ----------- API SPOTIFY AND APPLE POST ROUTES
+  app.post('/apple-user-token', (req, res) => {
+    const { userToken } = req.body;
+    req.session.appleUserToken = userToken;
+    res.json({ message: 'Apple Music token stored' });
+  });
+
+  app.post('/upload-spotify', async (req, res) => {
+    const { spotifyLink } = req.body;
+    const token = req.session.spotifyAccessToken;
+  
+    if (!token) {
+      return res.render('pages/home', { message: 'You must connect to Spotify first.' });
+    }
+  
+    const match = spotifyLink.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (!match) {
+      return res.render('pages/home', { message: 'Invalid Spotify playlist link.' });
+    }
+  
+    const playlistId = match[1];
+  
+    try {
+      // Fetch playlist data
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const playlist = await response.json();
+  
+      // Insert playlist into DB
+      const userId = req.session.user.id;
+      const newPlaylist = await db.one(
+        `INSERT INTO playlists (name, description, user_id, image_url)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [playlist.name, playlist.description || '', userId, playlist.images?.[0]?.url || null]
+      );
+  
+      // Insert songs
+      for (const item of playlist.tracks.items) {
+        const track = item.track;
+        const isrc = track.external_ids?.isrc;
+  
+        if (!isrc) continue;
+  
+        await db.none(
+          `INSERT INTO songs (isrc, title, artist, playlist_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (isrc) DO NOTHING`,
+          [isrc, track.name, track.artists[0].name, newPlaylist.id]
+        );
+      }
+  
+      return res.render('pages/home', {
+        message: `Successfully uploaded Spotify playlist: ${playlist.name}`,
+        playlist
+      });
+    } catch (err) {
+      console.error('Spotify Upload Error:', err);
+      return res.render('pages/home', { message: 'Failed to upload Spotify playlist.' });
+    }
+  });
+  
+
+  app.post('/upload-apple', async (req, res) => {
+    const { appleLink } = req.body;
+    const userToken = req.session.appleUserToken;
+    const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
+  
+    if (!userToken) {
+      return res.render('pages/home', { message: 'You must connect to Apple Music first.' });
+    }
+  
+    const match = appleLink.match(/(pl\.[\w-]+)/);
+    if (!match) {
+      return res.render('pages/home', { message: 'Invalid Apple Music playlist link.' });
+    }
+  
+    const playlistId = match[1];
+  
+    try {
+      const response = await fetch(`https://api.music.apple.com/v1/catalog/us/playlists/${playlistId}`, {
+        headers: {
+          Authorization: `Bearer ${developerToken}`,
+          'Music-User-Token': userToken
+        }
+      });
+  
+      const data = await response.json();
+      const playlist = data.data[0];
+      const attributes = playlist.attributes;
+  
+      // Insert playlist into DB
+      const userId = req.session.user.id;
+      const newPlaylist = await db.one(
+        `INSERT INTO playlists (name, description, user_id, image_url)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [attributes.name, attributes.description?.standard || '', userId, attributes.artwork?.url || null]
+      );
+  
+      // Fetch playlist tracks
+      const songsUrl = `https://api.music.apple.com${playlist.relationships.tracks.href}`;
+const songsResponse = await fetch(songsUrl, {
+        headers: {
+          Authorization: `Bearer ${developerToken}`,
+          'Music-User-Token': userToken
+        }
+      });
+  
+      const songsData = await songsResponse.json();
+  
+      for (const song of songsData.data) {
+        const isrc = song.attributes.isrc;
+  
+        if (!isrc) continue;
+  
+        await db.none(
+          `INSERT INTO songs (isrc, title, artist, playlist_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (isrc) DO NOTHING`,
+          [isrc, song.attributes.name, song.attributes.artistName, newPlaylist.id]
+        );
+      }
+  
+      return res.render('pages/home', {
+        message: `Successfully uploaded Apple Music playlist: ${attributes.name}`,
+        playlist: attributes
+      });
+    } catch (err) {
+      console.error('Apple Upload Error:', err);
+      return res.render('pages/home', { message: 'Failed to upload Apple Music playlist.' });
+    }
+  });
+  
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
