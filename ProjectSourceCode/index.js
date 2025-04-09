@@ -64,7 +64,7 @@ app.use(
 const upload = multer(); // Kendrix - multer handles multipart/form-data file uploads
 
 const auth = (req, res, next) => {
-  const openRoutes = ['/login', '/register', '/home'];
+  const openRoutes = ['/login', '/register', '/home', '/welcome'];
   if (!req.session.user && !openRoutes.includes(req.path)) {
     return res.redirect('/login');
   }
@@ -77,9 +77,11 @@ app.use(auth);
 // <!-- Section 5 : API Routes -->
 // *****************************************************
 
-//kendrix - lets try and keep routes organized by post, get, etc...
-
 // =================== GET ROUTES ===================
+
+app.get('/welcome', (req, res) => {
+  res.json({ status: 'success', message: 'Welcome!' });
+});
 
 app.get('/', (req, res) => res.redirect('/login'));
 
@@ -140,22 +142,19 @@ app.post('/register', async (req, res) => {
   try {
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (user) {
-      return res.render('pages/register', { message: 'Username Already Taken' });
+      return res.status(409).json({ message: 'Username already exists' }).render('pages/register', { message: 'Username already exists' })
     }
 
     const hash = await bcrypt.hash(password, 10);
     const defaultImagePath = path.join(__dirname, 'src', 'resources', 'img', 'Defaultpfp.png');
     const defaultImage = fs.readFileSync(defaultImagePath);
 
-    await db.none(
-      'INSERT INTO users (username, password, pfp) VALUES ($1, $2, $3)',
-      [username, hash, defaultImage]
-    );
+    await db.none('INSERT INTO users (username, password, pfp) VALUES ($1, $2, $3)', [username, hash, defaultImage]);
 
-    return res.redirect('/login');
+    return res.status(200).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error('Registration Error:', err);
-    return res.render('pages/register', { message: 'Registration failed. Try again.' });
+    return res.status(409).json({ message: 'Username already exists' }).render('pages/register', { message: 'Registration failed due to an internal error' })
   }
 });
 
@@ -222,10 +221,6 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       message: 'Error updating settings. Try again.',
     });
   }
-});
-
-app.get('/welcome', (req, res) => {
-  res.json({status: 'success', message: 'Welcome!'});
 });
 
 // *****************************************************
