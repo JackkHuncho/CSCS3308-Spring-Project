@@ -1,0 +1,119 @@
+
+** Feature 1: Convert Spotify Playlist to Apple Music **
+
+Test Case: Successful Conversion
+Test Data: A Spotify playlist with 10 songs, each having clear metadata (artist name, title).
+
+User Activity:
+- Log into the app.
+- Click “Convert Playlist.”
+- Paste a valid Spotify playlist URL.
+- Click “Convert to Apple Music.”
+Expected Result: Playlist is successfully converted and all 10 songs appear on the Apple Music side.
+Test Environment: localhost during development, cloud for final user testing.
+
+Test Result Verification:
+Songs match on both platforms.
+No errors shown.
+Confirmation message displayed.
+User Acceptance Tester should insert a valid Spotify playlist URl while logged into a valid user
+Actual Test Result: Songs converted and matched correctly. Confirmation message received.
+
+Test Case: Invalid Playlist URL
+Test Data: An invalid playlist URL
+
+User Activity:
+- Log in.
+- Paste invalid URL into conversion input.
+- Click “Convert Playlist.”
+Expected Result: Error message shown and conversion does not proceed.
+Test Environment: localhost for backend error handling.
+
+Test Result Verification:
+HTTP 400 response.
+Error message: "Invalid playlist URL."
+User Acceptance Tester should input an invalid Spotify playlist URL while logged into a valid user
+Actual Test Result: API rejected invalid URL with correct error message.
+
+
+** Feature 2: Posting a Playlist to the Community **
+
+Test Case: Successful Post
+Test Data: 
+Title: "Chill Beats"
+Description: "Check out my new playlist!"
+Link: "https://open.spotify.com/playlist/chill123"
+User ID: 42
+
+User Activity:
+- Log in.
+- Navigate to “Post a Playlist.”
+- Fill out fields.
+- Click “Post.”
+Expected Result: Playlist appears in the community feed for other users to see.
+Test Environment: localhost for dev, cloud for live user testing.
+
+- Test Result Verification:
+- Post displays correctly.
+- Entry exists in the database.
+User Acceptance Tester should fill out all fields and a valid URL to post a playlist.
+Actual Test Result: Playlist successfully posted and visible to all users.
+
+Test Case: Missing Required Field
+Test Data:
+Title: (empty)
+Description: "New Playlist!"
+Link: Valid URL
+
+User Activity:
+- Leave title blank.
+- Click “Post.”
+Expected Result: Error shown, post not submitted.
+Test Environment: localhost form validation.
+
+Test Result Verification:
+- Error shown under title field.
+- No post created.
+User Acceptance Tester should not input a title.
+Actual Test Result: Form blocked submission, error message shown correctly.
+
+
+** Feature 3: Changing Username in Settings **
+
+Test Case: Change Username
+Test Data:
+Old Username: "musicfan123"
+New Username: "musicguru456"
+
+User Activity:
+- Log in.
+- Navigate to Settings page.
+- Update the username field to "musicguru456".
+- Click "Save Changes."
+Expected Result: Username is updated in the database and displayed across the site.
+Test Environment: localhost for form validation; cloud for integration with backend.
+
+Test Result Verification:
+- API returns HTTP 200.
+- Updated username visible on profile and to other users.
+User Acceptance Tester should input a different username than it's current.
+Actual Test Result: Username change persisted and shown correctly on all pages.
+
+Test Case: Reject Duplicate Username
+Test Data:
+Old Username: "musicfan123"
+New Username: "existinguser"
+
+User Activity:
+- Log in as "musicfan123".
+- Navigate to Settings.
+- Attempt to change username to "existinguser" (already taken).
+- Click "Save Changes."
+Expected Result: API returns HTTP 400. Error message like "Username already taken" is displayed.
+Test Environment: localhost for backend validation.
+
+Test Result Verification:
+- No changes in database.
+- Error message shown to user.
+User Acceptance Tester should input an already existing username when attempting to change username.
+Actual Test Result: API blocked the update and returned correct error message.

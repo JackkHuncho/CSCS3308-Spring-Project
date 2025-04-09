@@ -140,21 +140,17 @@ app.get('/pfp/:username', async (req, res) => {
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
-    // Check if username already exists
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (user) {
       return res.status(409).json({ message: 'Username already exists' }).render('pages/register', { message: 'Username already exists' })
     }
 
-    // Hash the password and store a default profile picture
     const hash = await bcrypt.hash(password, 10);
     const defaultImagePath = path.join(__dirname, 'src', 'resources', 'img', 'Defaultpfp.png');
     const defaultImage = fs.readFileSync(defaultImagePath);
 
-    // Insert user into the database
     await db.none('INSERT INTO users (username, password, pfp) VALUES ($1, $2, $3)', [username, hash, defaultImage]);
 
-    // Return success message
     return res.status(200).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error('Registration Error:', err);
