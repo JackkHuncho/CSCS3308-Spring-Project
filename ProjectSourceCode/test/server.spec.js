@@ -74,13 +74,13 @@ describe('Login Route Tests', () => {
   // Positive Test Case
   it('should return 200 and success message for valid credentials', done => {
     const validUser = {
-      username: 'crosstuner',
-      password: 'thisismypassword123',
+      username: 'testusa',
+      password: 'Test@1234',
     };
 
     chai
       .request(server)
-      .post('/loginTest')
+      .post('/login')
       .send(validUser)
       .end((err, res) => {
         expect(res).to.have.status(200);
@@ -99,7 +99,7 @@ describe('Login Route Tests', () => {
   
     chai
       .request(server)
-      .post('/loginTest')
+      .post('/login')
       .send(invalidUser)
       .end((err, res) => {
         // Verify the response
