@@ -20,7 +20,7 @@ services:
       - '3000:3000'
     volumes:
       - ./:/repository
-    #command: 'npm start' # For normal running
+    #command: 'npm start' # For normal running without test
     command: 'npm run testandrun' #For testing purposes
 
 volumes:
