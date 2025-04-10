@@ -6,6 +6,8 @@ DROP TABLE IF EXISTS posts;
 
 CREATE TABLE posts (
   id SERIAL PRIMARY KEY,
+  -- username VARCHAR(100) NOT NULL,
+  -- pfp BYTEA,
   title VARCHAR(100) NOT NULL,
   caption VARCHAR(400) NOT NULL,
   duration SMALLINT NOT NULL,

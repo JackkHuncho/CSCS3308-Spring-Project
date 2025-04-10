@@ -12,7 +12,20 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const multer = require('multer');
+const fetch = require('node-fetch');
+require('dotenv').config();
 
+// *****************************************************
+// <!-- Section 1.5 : Connect to API Additions -->
+// *****************************************************
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  saveUninitialized: false,
+  resave: false,
+}));
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
@@ -23,7 +36,7 @@ const hbs = handlebars.create({
   layoutsDir: path.join(__dirname, 'src', 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
   helpers: {
-    convertToEmbed: (url) => {
+    convertToEmbedSpotify: (url) => {
       const match = url.match(/playlist\/([^?]+)/);
       if (!match) return '';
       const id = match[1];
@@ -87,6 +100,90 @@ app.use(auth);
 // *****************************************************
 // <!-- Section 5 : API Routes -->
 // *****************************************************
+  // --- Apple Developer Token Route (static)
+  app.get('/apple-token', (req, res) => {
+    const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
+    res.json({ token: developerToken });
+  });
+
+  // --- Apple User Token Capture
+  app.post('/apple-user-token', (req, res) => {
+    const { userToken } = req.body;
+    req.session.appleUserToken = userToken;
+    res.json({ message: 'Apple Music token stored' });
+  });
+
+  // --- Spotify Auth Redirect
+  app.get('/connect-spotify', (req, res) => {
+    const { SPOTIFY_CLIENT_ID } = process.env;
+    const redirectUri = 'http://localhost:3000/spotify-callback';
+    const scope = 'playlist-read-private playlist-read-collaborative';
+
+    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope,
+    })}`;
+
+    res.redirect(authUrl);
+  });
+
+  // --- Spotify Auth Redirect
+  app.get('/connect-spotify', (req, res) => {
+    const { SPOTIFY_CLIENT_ID } = process.env;
+    const redirectUri = 'http://localhost:3000/spotify-callback';
+    const scope = 'playlist-read-private playlist-read-collaborative';
+
+    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope,
+    })}`;
+
+    res.redirect(authUrl);
+  });
+
+  app.get('/spotify-callback', async (req, res) => {
+    const code = req.query.code;
+  
+    try {
+      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: 'http://localhost:3000/spotify-callback'
+        })
+      });
+  
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+  
+      // Fetch Spotify user info (optional)
+      const userResponse = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+  
+      const userInfo = await userResponse.json();
+      console.log('Spotify User Info:', userInfo);
+  
+      req.session.spotifyAccessToken = accessToken;
+      req.session.successMessage = 'Successfully connected to Spotify!';
+      res.redirect('/home');
+    } catch (error) {
+      console.error('Error during Spotify callback:', error);
+      res.status(500).send('Spotify authentication failed');
+    }
+  });
+
 
 // =================== GET ROUTES ===================
 
