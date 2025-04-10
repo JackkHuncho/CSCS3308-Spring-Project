@@ -2,7 +2,14 @@ CREATE TABLE users (id SERIAL PRIMARY KEY, username VARCHAR(100) NOT NULL, passw
 
 CREATE TABLE users_to_posts(user_id INT NOT NULL, post_id INT NOT NULL);
 
-CREATE TABLE posts(id SERIAL PRIMARY KEY, description VARCHAR(400) NOT NULL, duration SMALLINT NOT NULL, applelink VARCHAR(100) NOT NULL, spotLink VARCHAR(100) NOT NULL, upvotes INT);
+CREATE TABLE posts(
+    id SERIAL PRIMARY KEY, 
+    description VARCHAR(400) NOT NULL, 
+    duration SMALLINT NOT NULL, 
+    applelink VARCHAR(100) NOT NULL, 
+    spotLink VARCHAR(100) NOT NULL, 
+    upvotes INT
+);
 
 CREATE TABLE playlists (
   id SERIAL PRIMARY KEY,
