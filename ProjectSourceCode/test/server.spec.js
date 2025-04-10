@@ -37,7 +37,7 @@ describe('Testing Register API', () => {
       .request(server)
       .post('/register')
       .send({
-        username: 'tessss',
+        username: 'testusa',
         password: 'Test@1234'
       })
       .end((err, res) => {
@@ -50,7 +50,7 @@ describe('Testing Register API', () => {
   // Negative test case: Try to register with the same username
   it('negative : /register - should reject duplicate username', (done) => {
     const duplicateUser = {
-      username: 'cam', // Same username as positive test
+      username: 'testusa', // Same username as positive test
       password: 'testinggg' // Diff password
     };
 
