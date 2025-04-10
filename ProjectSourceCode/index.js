@@ -116,7 +116,7 @@ app.use(auth);
   // --- Spotify Auth Redirect
   app.get('/connect-spotify', (req, res) => {
     const { SPOTIFY_CLIENT_ID } = process.env;
-    const redirectUri = 'http://localhost:3000/spotify-callback';
+    const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
     const scope = 'playlist-read-private playlist-read-collaborative';
 
     const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
@@ -129,24 +129,10 @@ app.use(auth);
     res.redirect(authUrl);
   });
 
-  // --- Spotify Auth Redirect
-  app.get('/connect-spotify', (req, res) => {
-    const { SPOTIFY_CLIENT_ID } = process.env;
-    const redirectUri = 'http://localhost:3000/spotify-callback';
-    const scope = 'playlist-read-private playlist-read-collaborative';
-
-    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
-      response_type: 'code',
-      redirect_uri: redirectUri,
-      scope,
-    })}`;
-
-    res.redirect(authUrl);
-  });
 
   app.get('/spotify-callback', async (req, res) => {
     const code = req.query.code;
+    const redirectBack = req.query.from === 'settings' ? '/settings' : '/home';
   
     try {
       const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
@@ -158,31 +144,22 @@ app.use(auth);
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           code,
-          redirect_uri: 'http://localhost:3000/spotify-callback'
+          redirect_uri: 'http://localhost:3000/spotify-callback?from=settings'
         })
       });
   
       const tokenData = await tokenResponse.json();
       const accessToken = tokenData.access_token;
   
-      // Fetch Spotify user info (optional)
-      const userResponse = await fetch('https://api.spotify.com/v1/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-  
-      const userInfo = await userResponse.json();
-      console.log('Spotify User Info:', userInfo);
-  
       req.session.spotifyAccessToken = accessToken;
-      req.session.successMessage = 'Successfully connected to Spotify!';
-      res.redirect('/settings');
+
+      res.redirect('/settings?spotify=connected');
     } catch (error) {
-      console.error('Error during Spotify callback:', error);
+      console.error('Spotify callback error:', error);
       res.status(500).send('Spotify authentication failed');
     }
   });
+  
 
 
 // =================== GET ROUTES ===================
