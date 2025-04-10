@@ -112,16 +112,6 @@
     </form>
   </div>
 
-          {{!-- <div style="left: 0; width: 100%; height: 450px; position: relative;">
-          <iframe src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490" 
-          style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;" 
-          allowfullscreen 
-          allow="encrypted-media; fullscreen; clipboard-write;">
-          </iframe>
-          </div> --}}
-
-
-
   <div id="postsContainer">
     {{#each posts}}
       <div class="playlist-card">
@@ -129,9 +119,8 @@
         <p>{{caption}}</p>
 
         {{#if applelink}}
-        {{!-- <a href="{{applelink}}" target="_blank">Apple Music</a> --}}
-                  <iframe style="border-radius:12px"
-                  src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490"
+          <iframe style="border-radius:12px"
+                  src="{{convertToEmbed applelink}}"
                   width="100%" height="152" frameBorder="0"
                   allowfullscreen
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"

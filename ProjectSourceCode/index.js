@@ -37,10 +37,18 @@ const hbs = handlebars.create({
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
   helpers: {
     convertToEmbed: (url) => {
-      const match = url.match(/playlist\/([^?]+)/);
-      if (!match) return '';
-      const id = match[1];
-      return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+      const spotifyMatch = url.match(/playlist\/([^?]+)/);
+      const appleMatch = url.match(/apple\.com\/.+\/playlist\/.+\/(pl\..+?)(\?|$)/);
+  
+      if (url.includes('spotify') && spotifyMatch) {
+        const id = spotifyMatch[1];
+        return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+      } else if (url.includes('apple') && appleMatch) {
+        const id = appleMatch[1];
+        return `https://embed.music.apple.com/us/playlist/${id}`;
+      } else {
+        return '';
+      }
     }
   }
 });
