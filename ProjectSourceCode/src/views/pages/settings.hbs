@@ -72,6 +72,17 @@
       style="text-decoration: none;"
     >Connect with Spotify</a>
   </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('spotify') === 'connected') {
+        alert("Spotify connected!");
+        // Clean up the URL to avoid repeat alerts
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    });
+  </script>
 
 
 </div>
