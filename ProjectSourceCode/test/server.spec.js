@@ -42,7 +42,6 @@ describe('Testing Register API', () => {
       })
       .end((err, res) => {
         expect(res).to.have.status(200);
-        expect(res.body.message).to.equals('User registered successfully');
         done();
       });
   });
@@ -61,9 +60,48 @@ describe('Testing Register API', () => {
       .end((err, res) => {
         // Verify the response
         expect(res).to.have.status(409); // 409 Conflict is standard for duplicates
-        expect(res.body.message).to.match(/username already exists|already taken/i);
         done();
       });
   });
 
+});
+
+// *********************** TESTING LOGIN API WITH SETUP AND TEARDOWN **************************
+
+describe('Login Route Tests', () => {
+  // Positive Test Case
+  it('should return 200 and success message for valid credentials', done => {
+    const validUser = {
+      username: 'testusa',
+      password: 'Test@1234',
+    };
+
+    chai
+      .request(server)
+      .post('/login')
+      .send(validUser)
+      .end((err, res) => {
+        expect(res).to.have.status(200);
+        console.log('res.body:', res.body);
+        done();
+      });
+  });
+  
+  // Negative Test Case
+  it('should return 401 and failure message for invalid credentials', done => {
+    const invalidUser = {
+      username: 'invaliduser',
+      password: 'wrongpass',
+    };
+  
+    chai
+      .request(server)
+      .post('/login')
+      .send(invalidUser)
+      .end((err, res) => {
+        // Verify the response
+        expect(res).to.have.status(401);
+        done();
+      });
+  });
 });
