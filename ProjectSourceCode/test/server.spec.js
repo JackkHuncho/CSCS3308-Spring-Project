@@ -67,3 +67,45 @@ describe('Testing Register API', () => {
   });
 
 });
+
+// *********************** TESTING LOGIN API WITH SETUP AND TEARDOWN **************************
+
+describe('Login Route Tests', () => {
+  // Positive Test Case
+  it('should return 200 and success message for valid credentials', done => {
+    const validUser = {
+      username: 'crosstuner',
+      password: 'thisismypassword123',
+    };
+
+    chai
+      .request(server)
+      .post('/loginTest')
+      .send(validUser)
+      .end((err, res) => {
+        expect(res).to.have.status(200);
+        console.log('res.body:', res.body);
+        expect(res.body.message).to.equal('Login Successful.');
+        done();
+      });
+  });
+  
+  // Negative Test Case
+  it('should return 401 and failure message for invalid credentials', done => {
+    const invalidUser = {
+      username: 'invaliduser',
+      password: 'wrongpass',
+    };
+  
+    chai
+      .request(server)
+      .post('/loginTest')
+      .send(invalidUser)
+      .end((err, res) => {
+        // Verify the response
+        expect(res).to.have.status(401);
+        expect(res.body.message).to.equal('Incorrect Username or Password.');
+        done();
+      });
+  });
+});
