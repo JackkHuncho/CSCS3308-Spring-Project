@@ -2,16 +2,17 @@
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
 
-const express = require('express'); // To build an application server or API
+const express = require('express');
 const app = express();
 const handlebars = require('express-handlebars');
 const path = require('path');
-const pgp = require('pg-promise')(); // To connect to the Postgres DB from the node server
+const pgp = require('pg-promise')();
 const bodyParser = require('body-parser');
-const session = require('express-session'); // To set the session object
-const bcrypt = require('bcryptjs'); // To hash passwords
-const fs = require('fs'); // for reading files like images
-const multer = require('multer'); // Kendrix - added multer to simplify file parsing
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const multer = require('multer');
+
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
@@ -21,6 +22,14 @@ const hbs = handlebars.create({
   extname: 'hbs',
   layoutsDir: path.join(__dirname, 'src', 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
+  helpers: {
+    convertToEmbed: (url) => {
+      const match = url.match(/playlist\/([^?]+)/);
+      if (!match) return '';
+      const id = match[1];
+      return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+    }
+  }
 });
 
 const dbConfig = {
@@ -49,8 +58,10 @@ db.connect()
 app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
-app.use(bodyParser.json());
+
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
 
 app.use(
@@ -61,7 +72,7 @@ app.use(
   })
 );
 
-const upload = multer(); // Kendrix - multer handles multipart/form-data file uploads
+const upload = multer();
 
 const auth = (req, res, next) => {
   const openRoutes = ['/login', '/register', '/home', '/welcome'];
@@ -89,7 +100,26 @@ app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }
 
 app.get('/register', (req, res) => res.render('pages/register'));
 
-app.get('/home', (req, res) => res.render('pages/home'));
+app.get('/home', async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  try {
+    const posts = await db.any('SELECT * FROM posts ORDER BY id DESC');
+    res.render('pages/home', {
+      user: req.session.user,
+      posts: posts
+    });
+  } catch (err) {
+    console.error('Error loading posts:', err);
+    res.render('pages/home', {
+      user: req.session.user,
+      message: 'Error loading playlists',
+      posts: []
+    });
+  }
+});
 
 app.get('/logout', (req, res) => {
   req.session.destroy(err => {
@@ -142,7 +172,7 @@ app.post('/register', async (req, res) => {
   try {
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (user) {
-      return res.status(409).json({ message: 'Username already exists' })
+      return res.status(409).json({ message: 'Username already exists' });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -154,7 +184,7 @@ app.post('/register', async (req, res) => {
     return res.status(200).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error('Registration Error:', err);
-    return res.status(409).json({ message: 'Username already exists' })
+    return res.status(409).json({ message: 'Username already exists' });
   }
 });
 
@@ -171,7 +201,7 @@ app.post('/login', async (req, res) => {
       return res.render('pages/login', { message: 'Incorrect Username or Password.' });
     }
 
-    user.pfp = `/pfp/${user.username}`; // Kendrix - serve image from dynamic route
+    user.pfp = `/pfp/${user.username}`;
     req.session.user = user;
     req.session.save(() => res.redirect('/home'));
   } catch (err) {
@@ -197,7 +227,6 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       passwordToSave = req.session.user.password;
     }
 
-    // Update user in DB
     const updatedUser = await db.one(
       `UPDATE users 
        SET username = $1, password = $2, pfp = $3 
@@ -206,8 +235,7 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       [username, passwordToSave, pfpBuffer, req.session.user.id]
     );
 
-    // Update session with fresh values
-    updatedUser.pfp = `/pfp/${updatedUser.username}`; // Kendrix - convert buffer to image URL again
+    updatedUser.pfp = `/pfp/${updatedUser.username}`;
     req.session.user = updatedUser;
 
     res.render('pages/settings', {
@@ -220,6 +248,30 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       user: req.session.user,
       message: 'Error updating settings. Try again.',
     });
+  }
+});
+
+// =================== POST /posts ===================
+
+app.post('/posts', async (req, res) => {
+  const { title, caption, applelink, spotLink } = req.body;
+
+  if (!applelink && !spotLink) {
+    return res.status(400).json({ success: false, message: 'Please provide at least one link.' });
+  }
+
+  try {
+    const duration = 0;
+
+    const post = await db.one(
+      'INSERT INTO posts (title, caption, duration, applelink, spotLink, upvotes) VALUES ($1, $2, $3, $4, $5, 0) RETURNING *',
+      [title, caption, duration, applelink || null, spotLink || null]
+    );
+
+    res.json({ success: true, post });
+  } catch (err) {
+    console.error('Post creation error:', err);
+    res.status(500).json({ success: false, message: 'Database error while creating post.' });
   }
 });
 
