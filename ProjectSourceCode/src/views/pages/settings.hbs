@@ -19,4 +19,70 @@
         
         <button type="submit" class="btn btn-primary">Save Changes</button>
     </form>
+
+
+
+
+    <div class="mt-3">
+    <button id="connectAppleBtn" class="btn btn-danger btn-animated">Connect with Apple Music</button>
+  </div>
+
+  <script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const res = await fetch("/apple-token");
+      const { token: devToken } = await res.json();
+
+      MusicKit.configure({
+        developerToken: devToken,
+        app: {
+          name: "CrossTune",
+          build: "1.0"
+        }
+      });
+
+      const music = MusicKit.getInstance();
+
+      document.getElementById("connectAppleBtn").addEventListener("click", async () => {
+        try {
+          const userToken = await music.authorize();
+
+          await fetch("/apple-user-token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ userToken })
+          });
+
+          alert("Apple Music connected!");
+          window.location.reload();
+        } catch (err) {
+          console.error("Apple Music connection failed:", err);
+        }
+      });
+    });
+  </script>
+
+<!-- Connect Spotify -->
+  <div class="mt-3">
+    <a
+      href="/connect-spotify"
+      class="btn btn-success btn-animated"
+      style="text-decoration: none;"
+    >Connect with Spotify</a>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('spotify') === 'connected') {
+        alert("Spotify connected!");
+        // Clean up the URL to avoid repeat alerts
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    });
+  </script>
+
+
 </div>
