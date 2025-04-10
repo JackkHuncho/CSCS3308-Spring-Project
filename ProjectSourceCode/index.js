@@ -36,7 +36,7 @@ const hbs = handlebars.create({
   layoutsDir: path.join(__dirname, 'src', 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
   helpers: {
-    convertToEmbedSpotify: (url) => {
+    convertToEmbed: (url) => {
       const match = url.match(/playlist\/([^?]+)/);
       if (!match) return '';
       const id = match[1];
@@ -177,7 +177,7 @@ app.use(auth);
   
       req.session.spotifyAccessToken = accessToken;
       req.session.successMessage = 'Successfully connected to Spotify!';
-      res.redirect('/home');
+      res.redirect('/settings');
     } catch (error) {
       console.error('Error during Spotify callback:', error);
       res.status(500).send('Spotify authentication failed');
