@@ -172,7 +172,7 @@ app.post('/register', async (req, res) => {
   try {
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (user) {
-      return res.status(409).json({ message: 'Username already exists' });
+      return res.status(409).render('pages/register', { message: 'Username Already Taken' });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -181,10 +181,10 @@ app.post('/register', async (req, res) => {
 
     await db.none('INSERT INTO users (username, password, pfp) VALUES ($1, $2, $3)', [username, hash, defaultImage]);
 
-    return res.status(200).json({ message: 'User registered successfully' });
+    return res.status(200).redirect('/login')
   } catch (err) {
     console.error('Registration Error:', err);
-    return res.status(409).json({ message: 'Username already exists' });
+    return res.status(409).render('pages/register', { message: 'Registration failed. Try again.' });
   }
 });
 
