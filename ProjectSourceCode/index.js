@@ -163,17 +163,17 @@ app.post('/login', async (req, res) => {
   try {
     const user = await db.oneOrNone('SELECT * FROM users WHERE username = $1', [username]);
     if (!user) {
-      return res.render('pages/login', { message: 'Incorrect Username or Password.' });
+      return res.status(401).render('pages/login', { message: 'Incorrect Username or Password.' });
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res.render('pages/login', { message: 'Incorrect Username or Password.' });
+      return res.status(401).render('pages/login', { message: 'Incorrect Username or Password.' });
     }
 
     user.pfp = `/pfp/${user.username}`; // Kendrix - serve image from dynamic route
     req.session.user = user;
-    req.session.save(() => res.redirect('/home'));
+    req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
     console.error('Login Error:', err);
     res.status(500).render('pages/login', { message: 'Server Error. Try again later.' });
