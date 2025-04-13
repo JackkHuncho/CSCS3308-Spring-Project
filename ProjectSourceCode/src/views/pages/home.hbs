@@ -200,6 +200,17 @@
           ? `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`
           : null;
 
+        const userID = {{ user.id }};
+        const postID = data.post.id;
+
+        const response = await fetch("/idConversion", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userID, postID })
+        });
+
         const container = document.createElement("div");
         container.className = "playlist-card fade-in";
         container.innerHTML = `

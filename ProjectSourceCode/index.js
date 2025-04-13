@@ -375,6 +375,22 @@ app.post('/posts', async (req, res) => {
   }
 });
 
+app.post('/idConversion', async (req, res) => {
+  const { userID, postID } = req.body;
+
+  try {
+    const userToPost = await db.one(
+      'INSERT INTO users_to_posts (user_id, post_id) VALUES ($1, $2) RETURNING *',
+      [userID, postID]
+    );
+
+    res.json({ success: true, userToPost });
+  } catch (err) {
+    console.error('ID conversion error:', err);
+    res.status(500).json({ success: false, message: 'Database error while creating post.' });
+  }
+});
+
 // *****************************************************
 // <!-- Section 7 : Start Server -->
 // *****************************************************
