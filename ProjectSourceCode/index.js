@@ -2,16 +2,30 @@
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
 
-const express = require('express'); // To build an application server or API
+const express = require('express');
 const app = express();
 const handlebars = require('express-handlebars');
 const path = require('path');
-const pgp = require('pg-promise')(); // To connect to the Postgres DB from the node server
+const pgp = require('pg-promise')();
 const bodyParser = require('body-parser');
-const session = require('express-session'); // To set the session object
-const bcrypt = require('bcryptjs'); // To hash passwords
-const fs = require('fs'); // for reading files like images
-const multer = require('multer'); // Kendrix - added multer to simplify file parsing
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const multer = require('multer');
+const fetch = require('node-fetch');
+require('dotenv').config();
+
+// *****************************************************
+// <!-- Section 1.5 : Connect to API Additions -->
+// *****************************************************
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  saveUninitialized: false,
+  resave: false,
+}));
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
@@ -21,6 +35,14 @@ const hbs = handlebars.create({
   extname: 'hbs',
   layoutsDir: path.join(__dirname, 'src', 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
+  helpers: {
+    convertToEmbed: (url) => {
+      const match = url.match(/playlist\/([^?]+)/);
+      if (!match) return '';
+      const id = match[1];
+      return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+    }
+  }
 });
 
 const dbConfig = {
@@ -49,8 +71,10 @@ db.connect()
 app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
-app.use(bodyParser.json());
+
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
 
 app.use(
@@ -61,7 +85,7 @@ app.use(
   })
 );
 
-const upload = multer(); // Kendrix - multer handles multipart/form-data file uploads
+const upload = multer();
 
 const auth = (req, res, next) => {
   const openRoutes = ['/login', '/register', '/home', '/welcome'];
@@ -76,6 +100,67 @@ app.use(auth);
 // *****************************************************
 // <!-- Section 5 : API Routes -->
 // *****************************************************
+  // --- Apple Developer Token Route (static)
+  app.get('/apple-token', (req, res) => {
+    const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
+    res.json({ token: developerToken });
+  });
+
+  // --- Apple User Token Capture
+  app.post('/apple-user-token', (req, res) => {
+    const { userToken } = req.body;
+    req.session.appleUserToken = userToken;
+    res.json({ message: 'Apple Music token stored' });
+  });
+
+  // --- Spotify Auth Redirect
+  app.get('/connect-spotify', (req, res) => {
+    const { SPOTIFY_CLIENT_ID } = process.env;
+    const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
+    const scope = 'playlist-read-private playlist-read-collaborative';
+
+    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope,
+    })}`;
+
+    res.redirect(authUrl);
+  });
+
+
+  app.get('/spotify-callback', async (req, res) => {
+    const code = req.query.code;
+    const redirectBack = req.query.from === 'settings' ? '/settings' : '/home';
+  
+    try {
+      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: 'http://localhost:3000/spotify-callback?from=settings'
+        })
+      });
+  
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+  
+      req.session.spotifyAccessToken = accessToken;
+
+      res.redirect('/settings?spotify=connected');
+    } catch (error) {
+      console.error('Spotify callback error:', error);
+      res.status(500).send('Spotify authentication failed');
+    }
+  });
+  
+
 
 // =================== GET ROUTES ===================
 
@@ -89,7 +174,26 @@ app.get('/login', (req, res) => res.render('pages/login', { pageTitle: 'Login' }
 
 app.get('/register', (req, res) => res.render('pages/register'));
 
-app.get('/home', (req, res) => res.render('pages/home'));
+app.get('/home', async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  try {
+    const posts = await db.any('SELECT * FROM posts ORDER BY id DESC');
+    res.render('pages/home', {
+      user: req.session.user,
+      posts: posts
+    });
+  } catch (err) {
+    console.error('Error loading posts:', err);
+    res.render('pages/home', {
+      user: req.session.user,
+      message: 'Error loading playlists',
+      posts: []
+    });
+  }
+});
 
 app.get('/logout', (req, res) => {
   req.session.destroy(err => {
@@ -170,7 +274,7 @@ app.post('/login', async (req, res) => {
       return res.status(401).render('pages/login', { message: 'Incorrect Username or Password.' });
     }
 
-    user.pfp = `/pfp/${user.username}`; // Kendrix - serve image from dynamic route
+    user.pfp = `/pfp/${user.username}`;
     req.session.user = user;
     req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
@@ -223,7 +327,6 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       passwordToSave = req.session.user.password;
     }
 
-    // Update user in DB
     const updatedUser = await db.one(
       `UPDATE users 
        SET username = $1, password = $2, pfp = $3 
@@ -232,8 +335,7 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       [username, passwordToSave, pfpBuffer, req.session.user.id]
     );
 
-    // Update session with fresh values
-    updatedUser.pfp = `/pfp/${updatedUser.username}`; // Kendrix - convert buffer to image URL again
+    updatedUser.pfp = `/pfp/${updatedUser.username}`;
     req.session.user = updatedUser;
 
     res.render('pages/settings', {
@@ -246,6 +348,30 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
       user: req.session.user,
       message: 'Error updating settings. Try again.',
     });
+  }
+});
+
+// =================== POST /posts ===================
+
+app.post('/posts', async (req, res) => {
+  const { title, caption, applelink, spotLink } = req.body;
+
+  if (!applelink && !spotLink) {
+    return res.status(400).json({ success: false, message: 'Please provide at least one link.' });
+  }
+
+  try {
+    const duration = 0;
+
+    const post = await db.one(
+      'INSERT INTO posts (title, caption, duration, applelink, spotLink, upvotes) VALUES ($1, $2, $3, $4, $5, 0) RETURNING *',
+      [title, caption, duration, applelink || null, spotLink || null]
+    );
+
+    res.json({ success: true, post });
+  } catch (err) {
+    console.error('Post creation error:', err);
+    res.status(500).json({ success: false, message: 'Database error while creating post.' });
   }
 });
 

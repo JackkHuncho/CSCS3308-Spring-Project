@@ -1,0 +1,58 @@
+4/10/2025
+
+Briefly went over missing points on Lab 9
+ - Wireframes could have been more flushed out
+
+Ian checked out project board
+- Renner mentioned hardships on moving forward
+- Apple Music issues
+- A little behind on updating project board
+
+Renner went over his updates on the Apple API
+- Roadblock with Apple (common)
+- Figured out a work around
+- Plans on working with Shane to be able to post for Apple
+
+Shane went over posting playlist
+- Only for Spotify
+- Able to post with Spotify Playlists
+- Able to see the Spotify embed across all users
+- Worked on registration test cases as well (all passes)
+
+James went over the test cases and the issues he ran into
+- Kendrix assisted in the issues he had and was able to successfuly fix it
+- Worked on login test cases (all passes)
+
+Ian Notes
+- Mentioned that we should get more stuff on main for the TA meeting
+- Commits look good just mentioned posts and apple being behind in commits
+- ^ not an issue since the major changes in main shouldn't affect as it's mostly test cases
+- Mentioned that lab is due in TWO weeks
+- Last week is polishment and deployment
+
+Renner going over what we need to do
+- Playlist upload implementation by today
+- Playlist save work on this week
+- Update/Simplify the playlist (placeholders currently) need to work on this
+- Mainly just need to get the workflow working and fix functionalities especially with posts
+
+Kendrix
+- Plans on working on the Apple Music API
+- Will hop around to help everyone with minor issues, etc
+
+Shane
+- Plans on working on posts
+- Work with Renner to be able to post Apple Music Playlists
+- Get posts to properly show up on the User's Profile as it currently has placeholders
+
+Renner
+- Plans on working more on Apple API and getting that info into databases
+- Work with Shane to get info to him so we can display properly
+- Needs to give access to Apple Developer to teammates
+ - Brought up his concern with giving his Apple ID info out
+ - Ian mentioned that Apple keys shouldn't be on github and should be on discord
+
+James
+- Get upload playlist to properly place playlist info there
+- Built out profile page (properly puts posts on)
+- Upvotes on posts (upvotes already in database)
