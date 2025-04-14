@@ -106,21 +106,10 @@
     <form id="playlistForm">
       <input type="text" name="title" placeholder="Playlist title" required>
       <input type="text" name="caption" placeholder="Caption" required>
-      <input type="url" name="applelink" id="applelink" placeholder="Apple Music Link">
-      <input type="url" name="spotLink" id="spotLink" placeholder="Spotify Link">
+      <input type="url" name="applelink" id="applelink" placeholder="Spotify or Apple Music Link">
       <button type="submit">Post Playlist</button>
     </form>
   </div>
-
-          {{!-- <div style="left: 0; width: 100%; height: 450px; position: relative;">
-          <iframe src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490" 
-          style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;" 
-          allowfullscreen 
-          allow="encrypted-media; fullscreen; clipboard-write;">
-          </iframe>
-          </div> --}}
-
-
 
   <div id="postsContainer">
     {{#each posts}}
@@ -129,10 +118,9 @@
         <p>{{caption}}</p>
 
         {{#if applelink}}
-        {{!-- <a href="{{applelink}}" target="_blank">Apple Music</a> --}}
-                  <iframe style="border-radius:12px"
-                  src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490"
-                  width="100%" height="152" frameBorder="0"
+          <iframe style="border-radius:12px"
+                  src="{{convertToEmbed applelink}}"
+                  width="100%" height="450" frameBorder="0"
                   allowfullscreen
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy">
@@ -143,94 +131,99 @@
         {{#if spotlink}}
           <iframe style="border-radius:12px"
                   src="{{convertToEmbed spotlink}}"
-                  width="100%" height="152" frameBorder="0"
+                  width="100%" height="450" frameBorder="0"
                   allowfullscreen
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy">
           </iframe>
           
         {{/if}}
-
+        
         <button class="convert-button">Add Playlist</button>
       </div>
     {{/each}}
   </div>
 
-  <script>
-    function openPopup() {
-      document.getElementById("popup").style.visibility = "visible";
-      document.getElementById("popup-overlay").style.visibility = "visible";
+<script>
+  function openPopup() {
+    document.getElementById("popup").style.visibility = "visible";
+    document.getElementById("popup-overlay").style.visibility = "visible";
+  }
+
+  function closePopup() {
+    document.getElementById("popup").style.visibility = "hidden";
+    document.getElementById("popup-overlay").style.visibility = "hidden";
+  }
+
+  function isValidMusicLink(url) {
+    const trimmed = url.trim();
+    return trimmed.includes("open.spotify.com/playlist/") || trimmed.includes("music.apple.com/");
+  }
+
+  document.getElementById("playlistForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const title = this.title.value;
+    const caption = this.caption.value;
+    const applelink = this.applelink.value.trim();
+    const spotLink = this.spotLink?.value?.trim(); // In case it's still in DOM
+    const musicLink = applelink || spotLink;
+
+    if (!isValidMusicLink(musicLink)) {
+      alert("Please enter a valid Apple Music or Spotify playlist link.");
+      return;
     }
 
-    function closePopup() {
-      document.getElementById("popup").style.visibility = "hidden";
-      document.getElementById("popup-overlay").style.visibility = "hidden";
-    }
-
-    function validateLinks(apple, spotify) {
-      return apple.trim() || spotify.trim();
-    }
-
-    document.getElementById("playlistForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const title = this.title.value;
-      const caption = this.caption.value;
-      const applelink = this.applelink.value;
-      const spotLink = this.spotLink.value;
-
-      if (!validateLinks(applelink, spotLink)) {
-        alert("Please enter at least one link: Apple Music or Spotify.");
-        return;
-      }
-
-      const response = await fetch("/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ title, caption, applelink, spotLink })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const playlistId = data.post.spotLink?.split('/playlist/')[1]?.split('?')[0];
-        const embedUrl = playlistId
-          ? `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`
-          : null;
-
-        const container = document.createElement("div");
-        container.className = "playlist-card fade-in";
-        container.innerHTML = `
-          <h5>${data.post.title}</h5>
-          <p>${data.post.caption}</p>
-          ${data.post.applelink ? `<a href="${data.post.applelink}" target="_blank">Apple Music</a><br>` : ""}
-          ${embedUrl ? `
-            <iframe style="border-radius:12px"
-                    src="${embedUrl}"
-                    width="100%" height="152" frameBorder="0"
-                    allowfullscreen
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy">
-            </iframe>` : ""}
-          <button class="convert-button">Add to my Playlist</button>
-        `;
-
-        const postContainer = document.getElementById("postsContainer");
-        postContainer.insertBefore(container, postContainer.firstChild);
-
-        setTimeout(() => {
-          container.classList.add("show");
-        }, 50);
-
-        closePopup();
-        this.reset();
-      } else {
-        alert(data.message || "Failed to post playlist.");
-      }
+    const response = await fetch("/posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ title, caption, applelink, spotLink })
     });
-  </script>
+
+    const data = await response.json();
+
+    if (data.success) {
+      const playlistId = data.post.spotLink?.split('/playlist/')[1]?.split('?')[0];
+      const embedUrl = playlistId
+        ? `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`
+        : null;
+
+      const container = document.createElement("div");
+      container.className = "playlist-card fade-in";
+      container.innerHTML = `
+        <h5>${data.post.title}</h5>
+        <p>${data.post.caption}</p>
+      ${musicLink ? `<a href="${musicLink}" target="_blank">${musicLink.includes('spotify') ? 'Spotify' : 'Apple Music'}</a><br>` : ""}
+        ${embedUrl ? `
+          <iframe style="border-radius:12px"
+                  src="${embedUrl}"
+                  width="100%" height="152" frameBorder="0"
+                  allowfullscreen
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy">
+          </iframe>` : ""}
+        <button class="convert-button">Add to my Playlist</button>
+      `;
+
+      const postContainer = document.getElementById("postsContainer");
+      postContainer.insertBefore(container, postContainer.firstChild);
+
+      setTimeout(() => {
+        container.classList.add("show");
+      }, 50);
+
+      closePopup();
+      this.reset();
+      window.location.reload();
+
+    } else {
+      alert(data.message || "Failed to post playlist.");
+    }
+  });
+</script>
+
 {{else}}
   <p class="text-white">You are not logged in.</p>
 {{/if}}
