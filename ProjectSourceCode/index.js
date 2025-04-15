@@ -102,76 +102,88 @@ const auth = (req, res, next) => {
   if (!req.session.user && !openRoutes.includes(req.path)) {
     return res.redirect('/login');
   }
+
+  if (req.session.user) {
+    req.session.user.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.user.apple_connected = !!req.session.appleUserToken;
+  }
+
   res.locals.user = req.session.user;
   next();
 };
+
 app.use(auth);
 
 // *****************************************************
 // <!-- Section 5 : API Routes -->
 // *****************************************************
-  // --- Apple Developer Token Route (static)
-  app.get('/apple-token', (req, res) => {
-    const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
-    res.json({ token: developerToken });
-  });
 
-  // --- Apple User Token Capture
-  app.post('/apple-user-token', (req, res) => {
-    const { userToken } = req.body;
-    req.session.appleUserToken = userToken;
-    res.json({ message: 'Apple Music token stored' });
-  });
+// --- Apple Developer Token Route (static)
+app.get('/apple-token', (req, res) => {
+  const developerToken = process.env.APPLE_MUSIC_DEV_TOKEN;
+  res.json({ token: developerToken });
+});
 
-  // --- Spotify Auth Redirect
-  app.get('/connect-spotify', (req, res) => {
-    const { SPOTIFY_CLIENT_ID } = process.env;
-    const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
-    const scope = 'playlist-read-private playlist-read-collaborative';
+// --- Apple User Token Capture
+app.post('/apple-user-token', (req, res) => {
+  const { userToken } = req.body;
+  req.session.appleUserToken = userToken;
+  req.session.user = {
+    ...req.session.user,
+    apple_connected: true
+  };
+  res.json({ message: 'Apple Music token stored' });
+});
 
-    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
-      response_type: 'code',
-      redirect_uri: redirectUri,
-      scope,
-    })}`;
+// --- Spotify Auth Redirect
+app.get('/connect-spotify', (req, res) => {
+  const { SPOTIFY_CLIENT_ID } = process.env;
+  const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
+  const scope = 'playlist-read-private playlist-read-collaborative';
 
-    res.redirect(authUrl);
-  });
+  const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
+    client_id: SPOTIFY_CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    scope,
+  })}`;
 
+  res.redirect(authUrl);
+});
 
-  app.get('/spotify-callback', async (req, res) => {
-    const code = req.query.code;
-    const redirectBack = req.query.from === 'settings' ? '/settings' : '/home';
-  
-    try {
-      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: 'http://localhost:3000/spotify-callback?from=settings'
-        })
-      });
-  
-      const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
-  
-      req.session.spotifyAccessToken = accessToken;
+app.get('/spotify-callback', async (req, res) => {
+  const code = req.query.code;
+  const redirectBack = req.query.from === 'settings' ? '/settings' : '/home';
 
-      res.redirect('/settings?spotify=connected');
-    } catch (error) {
-      console.error('Spotify callback error:', error);
-      res.status(500).send('Spotify authentication failed');
-    }
-  });
-  
+  try {
+    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: 'http://localhost:3000/spotify-callback?from=settings'
+      })
+    });
 
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
 
+    req.session.spotifyAccessToken = accessToken;
+    req.session.user = {
+      ...req.session.user,
+      spotify_connected: true
+    };
+
+    res.redirect('/settings?spotify=connected');
+  } catch (error) {
+    console.error('Spotify callback error:', error);
+    res.status(500).send('Spotify authentication failed');
+  }
+});
 // =================== GET ROUTES ===================
 
 app.get('/welcome', (req, res) => {
