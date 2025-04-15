@@ -85,7 +85,6 @@ app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 app.use('/img', express.static(path.join(__dirname, 'src', 'resources', 'img')));
 
-
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
