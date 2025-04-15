@@ -139,7 +139,8 @@ app.post('/apple-user-token', (req, res) => {
 app.get('/connect-spotify', (req, res) => {
   const { SPOTIFY_CLIENT_ID } = process.env;
   const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
-  const scope = 'playlist-read-private playlist-read-collaborative';
+  const scope = 'playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public';
+
 
   const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
     client_id: SPOTIFY_CLIENT_ID,
@@ -455,8 +456,7 @@ app.post('/convert-playlist', async (req, res) => {
 
       // 1) Fetch tracks from Spotify
       const spotifyTracks = await fetchSpotifyPlaylistTracks(
-        spotifyPlaylistId,
-        spotifyAccessToken
+        spotifyPlaylistId
       );
 
       // 2) Create a new Apple Music playlist in user’s library
@@ -549,20 +549,66 @@ function extractAppleMusicPlaylistId(appleLink) {
   return match ? match[1] : null;
 }
 
+// to allow spotify to grab playlists with client isntead of user - kendrix
+async function getSpotifyClientCredentialsToken() {
+  const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env;
+  const resp = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization:
+        'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+    },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+    }),
+  });
+  const data = await resp.json();
+  return data.access_token;  // no user login needed
+}
+
+
 // =================== Spotify Helpers ===================
 
 // 1) Fetch all tracks from a Spotify playlist
-async function fetchSpotifyPlaylistTracks(playlistId, accessToken) {
+// Fetch tracks from a PUBLIC Spotify playlist using client credentials
+async function fetchSpotifyPlaylistTracks(playlistId) {
+  // 1) Get a client credentials token
+  const token = await getSpotifyClientCredentialsToken();
+
+  // 2) Call Spotify’s GET /v1/playlists/{playlist_id}/tracks
   const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+  console.log('Fetching public playlist URL:', url);
+
   const resp = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch Spotify playlist ${playlistId}`);
+
+  const status = resp.status;
+  let responseData;
+  try {
+    responseData = await resp.json();
+  } catch (err) {
+    console.error('Failed to parse response body:', err);
   }
-  const data = await resp.json();
-  // data.items: [ { track: {...} }, ...]
-  return (data.items || [])
+
+  console.log('Spotify response status:', status);
+  console.log('Spotify response body:', responseData);
+
+  if (!resp.ok) {
+    throw new Error(
+      `Failed to fetch Spotify playlist ${playlistId}: ${status} ${
+        responseData?.error?.message || JSON.stringify(responseData)
+      }`
+    );
+  }
+
+  // If successful, parse tracks from responseData
+  // Typically, responseData.items is an array of track objects
+  // For example: { items: [ { track: { name, artists[], album } }, ... ] }
+  return (responseData.items || [])
     .filter((item) => item.track)
     .map((item) => ({
       title: item.track.name,
@@ -570,6 +616,8 @@ async function fetchSpotifyPlaylistTracks(playlistId, accessToken) {
       album: item.track.album?.name || '',
     }));
 }
+
+
 
 // 2) Create a new Spotify playlist (in authorized user’s account)
 async function createSpotifyPlaylist(accessToken) {
