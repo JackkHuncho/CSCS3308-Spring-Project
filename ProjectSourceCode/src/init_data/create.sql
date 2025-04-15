@@ -15,3 +15,15 @@ CREATE TABLE posts (
   spotLink VARCHAR(255),
   upvotes INT DEFAULT 0
 );
+
+
+-- CREATE TABLE posts (
+--   id SERIAL PRIMARY KEY,
+--   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+--   title VARCHAR(100) NOT NULL,
+--   caption VARCHAR(400) NOT NULL,
+--   duration SMALLINT NOT NULL,
+--   applelink VARCHAR(255),
+--   spotlink VARCHAR(255),
+--   upvotes INT DEFAULT 0
+-- );

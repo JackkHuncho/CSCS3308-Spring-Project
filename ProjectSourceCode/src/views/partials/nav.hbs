@@ -1,5 +1,4 @@
-{{! Kendrix - I made a dynamic nav parital that changes based upon platform, that allows for user pfp image if on desktop}}
-
+{{! Kendrix - I made a dynamic nav partial that changes based upon platform, that allows for user pfp image if on desktop }}
 
 <style>
   /* === NAVBAR LINK & BRAND HOVER EFFECT === */
@@ -12,8 +11,13 @@
     overflow: hidden;
   }
 
-  /* === Brand Strikethrough (only on CrossTune) === */
-  .navbar-brand::after {
+  /* === Brand Text Hover Strike === */
+  .navbar-brand .brand-text {
+    position: relative;
+    display: inline-block;
+  }
+
+  .navbar-brand .brand-text::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -26,8 +30,8 @@
     transition: transform 0.3s ease-out;
   }
 
-  .navbar-brand:hover::after {
-    transform: scaleX(1); /* Blue line appears on hover */
+  .navbar-brand .brand-text:hover::after {
+    transform: scaleX(1);
   }
 
   /* === Nav Link Hover Line === */
@@ -49,7 +53,7 @@
     transform: scaleX(1);
   }
 
-  /* === Shake + Glow === */
+  /* === Shake + Glow (text only) === */
   @keyframes shakeGlowScale {
     0%   { transform: translateY(-2px) rotate(0.5deg) scale(1); }
     25%  { transform: translateY(-2px) rotate(-0.5deg) scale(1.02); }
@@ -59,7 +63,7 @@
   }
 
   .navbar-nav .nav-link:hover,
-  .navbar-brand:hover {
+  .navbar-brand .brand-text:hover {
     animation: shakeGlowScale 0.3s ease-in-out forwards;
     color: #e0e0e0;
     text-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
@@ -98,9 +102,11 @@
   }
 </style>
 
-
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary bg-gradient px-3">
-  <a class="navbar-brand fw-bold text-white" href="/home">CrossTune</a>
+  <a class="navbar-brand fw-bold text-white d-flex align-items-center gap-2" href="/home">
+    <img src="/img/logo.png" alt="Logo" style="height: 40px; width: 40px; border-radius: 50%;">
+    <span class="brand-text">CrossTune</span>
+  </a>
 
   <!-- Mobile View (Hamburger Menu) -->
   <button

@@ -79,6 +79,8 @@ db.connect()
 app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
+app.use('/img', express.static(path.join(__dirname, 'src', 'resources', 'img')));
+
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -370,10 +372,14 @@ app.post('/posts', async (req, res) => {
 
   try {
     const duration = 0;
+    const username = req.session.user.username;
+    const pfp = req.session.user.pfp;
 
     const post = await db.one(
-      'INSERT INTO posts (title, caption, duration, applelink, spotLink, upvotes) VALUES ($1, $2, $3, $4, $5, 0) RETURNING *',
-      [title, caption, duration, applelink || null, spotLink || null]
+      `INSERT INTO posts (title, caption, duration, applelink, spotLink, upvotes, username, pfp)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7)
+       RETURNING *`,
+      [title, caption, duration, applelink || null, spotLink || null, username, pfp]
     );
 
     res.json({ success: true, post });
@@ -382,6 +388,7 @@ app.post('/posts', async (req, res) => {
     res.status(500).json({ success: false, message: 'Database error while creating post.' });
   }
 });
+
 
 // *****************************************************
 // <!-- Section 7 : Start Server -->
