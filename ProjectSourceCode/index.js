@@ -131,6 +131,8 @@ app.get('/apple-token', (req, res) => {
 app.post('/apple-user-token', (req, res) => {
   const { userToken } = req.body;
   req.session.appleUserToken = userToken;
+  // added date/time stamp to auth flow
+  req.session.appleUserTokenIssuedAt = Date.now();
   req.session.user = {
     ...req.session.user,
     apple_connected: true
@@ -160,6 +162,8 @@ app.get('/spotify-callback', async (req, res) => {
 
   try {
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+      // added date/time stamp to auth flow
+      // TODO add time stamp to Oath for spotify
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -340,7 +344,11 @@ app.post('/login', async (req, res) => {
     }
 
     user.pfp = `/pfp/${user.username}`;
-    req.session.user = user;
+    req.session.user = {
+      user,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
     req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
     console.error('Login Error:', err);
@@ -401,7 +409,11 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
     );
 
     updatedUser.pfp = `/pfp/${updatedUser.username}`;
-    req.session.user = updatedUser;
+    req.session.user = {
+      updatedUser,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
 
     res.render('pages/settings', {
       user: req.session.user,
