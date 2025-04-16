@@ -37,21 +37,25 @@ const hbs = handlebars.create({
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
   helpers: {
     convertToEmbed: (url) => {
+      if (!url) return '';
       const spotifyMatch = url.match(/playlist\/([^?]+)/);
       const appleMatch = url.match(/apple\.com\/.+\/playlist\/.+\/(pl\..+?)(\?|$)/);
-  
+
       if (url.includes('spotify') && spotifyMatch) {
-        const id = spotifyMatch[1];
-        return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+        return `https://open.spotify.com/embed/playlist/${spotifyMatch[1]}?utm_source=generator`;
       } else if (url.includes('apple') && appleMatch) {
-        const id = appleMatch[1];
-        return `https://embed.music.apple.com/us/playlist/${id}`;
-      } else {
-        return '';
+        return `https://embed.music.apple.com/us/playlist/${appleMatch[1]}`;
       }
-    }
+
+      return '';
+    },
+
+    or: (a, b) => a || b
   }
 });
+
+
+
 
 const dbConfig = {
   host: 'db',
@@ -80,7 +84,6 @@ app.engine('hbs', hbs.engine);
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 app.use('/img', express.static(path.join(__dirname, 'src', 'resources', 'img')));
-
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -260,6 +263,46 @@ app.get('/pfp/:username', async (req, res) => {
     res.status(500).send('Error retrieving image');
   }
 });
+
+// user-profile route
+app.get('/user/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const user = await db.oneOrNone(
+      'SELECT username, bio FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (!user) {
+      return res.status(404).render('pages/user-profile', { message: 'User not found' });
+    }
+
+    const posts = await db.any(
+      'SELECT * FROM posts WHERE username = $1 ORDER BY id DESC',
+      [username]
+    );
+
+    const profileUser = {
+      ...user,
+      pfp: `/pfp/${username}`
+    };
+
+    res.render('pages/user-profile', {
+      profileUser,
+      posts,
+      user: req.session.user // needed to check login/ownership in template
+    });
+
+  } catch (err) {
+    console.error('User profile error:', err);
+    res.status(500).render('pages/user-profile', {
+      message: 'Error loading profile.'
+    });
+  }
+});
+
+
 
 // =================== POST ROUTES ===================
 
