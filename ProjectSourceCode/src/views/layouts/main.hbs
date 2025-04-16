@@ -6,3 +6,17 @@
 {{{body}}}
 <!-- TODO: Add the footer.hbs partial here -->
 {{> footer}}
+
+{{#if spotifyExpired}}
+  <div class="alert alert-warning text-center position-fixed top-0 w-100 z-3" role="alert" style="margin-top: 60px;">
+    You've been logged out of <strong>Spotify</strong>.
+    <a href="/connect-spotify" class="btn btn-sm btn-outline-dark ms-2">Reconnect</a>
+  </div>
+{{/if}}
+
+{{#if appleExpired}}
+  <div class="alert alert-danger text-center position-fixed top-0 w-100 z-3" role="alert" style="margin-top: 60px;">
+    You've been logged out of <strong>Apple Music</strong>.
+    <a href="/settings" class="btn btn-sm btn-light ms-2">Reconnect</a>
+  </div>
+{{/if}}

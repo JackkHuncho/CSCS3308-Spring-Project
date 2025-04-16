@@ -51,6 +51,7 @@
       if (appleBtn) {
         appleBtn.addEventListener("click", async () => {
           try {
+            await music.unauthorize(); // force re-auth
             const userToken = await music.authorize();
 
             await fetch("/apple-user-token", {

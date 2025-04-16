@@ -39,21 +39,25 @@ const hbs = handlebars.create({
   partialsDir: path.join(__dirname, 'src', 'views', 'partials'),
   helpers: {
     convertToEmbed: (url) => {
+      if (!url) return '';
       const spotifyMatch = url.match(/playlist\/([^?]+)/);
       const appleMatch = url.match(/apple\.com\/.+\/playlist\/.+\/(pl\..+?)(\?|$)/);
 
       if (url.includes('spotify') && spotifyMatch) {
-        const id = spotifyMatch[1];
-        return `https://open.spotify.com/embed/playlist/${id}?utm_source=generator`;
+        return `https://open.spotify.com/embed/playlist/${spotifyMatch[1]}?utm_source=generator`;
       } else if (url.includes('apple') && appleMatch) {
-        const id = appleMatch[1];
-        return `https://embed.music.apple.com/us/playlist/${id}`;
-      } else {
-        return '';
+        return `https://embed.music.apple.com/us/playlist/${appleMatch[1]}`;
       }
+
+      return '';
     },
-  },
+
+    or: (a, b) => a || b
+  }
 });
+
+
+
 
 const dbConfig = {
   host: 'db',
@@ -96,6 +100,43 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  const now = Date.now();
+  // TESTING QUICK ExpiRE
+  // const expiry = 30 * 1000;
+  // NORMAL EXPIRE
+  const expiry = 30 * 60 * 1000;
+
+  const spotifyExpired = req.session.spotifyAccessTokenIssuedAt &&
+    now - req.session.spotifyAccessTokenIssuedAt > expiry;
+
+  const appleExpired = req.session.appleUserTokenIssuedAt &&
+    now - req.session.appleUserTokenIssuedAt > expiry;
+
+  if (spotifyExpired) {
+    delete req.session.spotifyAccessToken;
+    delete req.session.spotifyAccessTokenIssuedAt;
+  }
+
+  if (appleExpired) {
+    delete req.session.appleUserToken;
+    delete req.session.appleUserTokenIssuedAt;
+  }
+
+  // Make flags available to all templates
+  res.locals.spotifyExpired = spotifyExpired;
+  res.locals.appleExpired = appleExpired;
+
+  if (req.session.user) {
+    req.session.user.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.user.apple_connected = !!req.session.appleUserToken;
+  }
+
+  next();
+});
+
+
+
 const upload = multer();
 
 const auth = (req, res, next) => {
@@ -129,6 +170,8 @@ app.get('/apple-token', (req, res) => {
 app.post('/apple-user-token', (req, res) => {
   const { userToken } = req.body;
   req.session.appleUserToken = userToken;
+  // added date/time stamp to auth flow
+  req.session.appleUserTokenIssuedAt = Date.now();
   req.session.user = {
     ...req.session.user,
     apple_connected: true,
@@ -179,6 +222,8 @@ app.get('/spotify-callback', async (req, res) => {
     const accessToken = tokenData.access_token;
 
     req.session.spotifyAccessToken = accessToken;
+    // added date/time stamp to auth flow
+    req.session.spotifyAccessTokenIssuedAt = Date.now();
     req.session.user = {
       ...req.session.user,
       spotify_connected: true,
@@ -270,6 +315,46 @@ app.get('/pfp/:username', async (req, res) => {
   }
 });
 
+// user-profile route
+app.get('/user/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const user = await db.oneOrNone(
+      'SELECT username, bio FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (!user) {
+      return res.status(404).render('pages/user-profile', { message: 'User not found' });
+    }
+
+    const posts = await db.any(
+      'SELECT * FROM posts WHERE username = $1 ORDER BY id DESC',
+      [username]
+    );
+
+    const profileUser = {
+      ...user,
+      pfp: `/pfp/${username}`
+    };
+
+    res.render('pages/user-profile', {
+      profileUser,
+      posts,
+      user: req.session.user // needed to check login/ownership in template
+    });
+
+  } catch (err) {
+    console.error('User profile error:', err);
+    res.status(500).render('pages/user-profile', {
+      message: 'Error loading profile.'
+    });
+  }
+});
+
+
+
 // =================== POST ROUTES ===================
 
 app.post('/register', async (req, res) => {
@@ -324,7 +409,11 @@ app.post('/login', async (req, res) => {
     }
 
     user.pfp = `/pfp/${user.username}`;
-    req.session.user = user;
+    req.session.user = {
+      user,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
     req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
     console.error('Login Error:', err);
@@ -390,7 +479,11 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
     );
 
     updatedUser.pfp = `/pfp/${updatedUser.username}`;
-    req.session.user = updatedUser;
+    req.session.user = {
+      updatedUser,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
 
     res.render('pages/settings', {
       user: req.session.user,
