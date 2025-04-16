@@ -101,9 +101,9 @@ app.use(
 app.use((req, res, next) => {
   const now = Date.now();
   // TESTING QUICK ExpiRE
-  const expiry = 30 * 1000;
+  // const expiry = 30 * 1000;
   // NORMAL EXPIRE
-  // const expiry = 30 * 60 * 1000;
+  const expiry = 30 * 60 * 1000;
 
   const spotifyExpired = req.session.spotifyAccessTokenIssuedAt &&
     now - req.session.spotifyAccessTokenIssuedAt > expiry;
