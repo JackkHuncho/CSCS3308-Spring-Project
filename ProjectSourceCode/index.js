@@ -98,6 +98,43 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  const now = Date.now();
+  // TESTING QUICK ExpiRE
+  const expiry = 30 * 1000;
+  // NORMAL EXPIRE
+  // const expiry = 30 * 60 * 1000;
+
+  const spotifyExpired = req.session.spotifyAccessTokenIssuedAt &&
+    now - req.session.spotifyAccessTokenIssuedAt > expiry;
+
+  const appleExpired = req.session.appleUserTokenIssuedAt &&
+    now - req.session.appleUserTokenIssuedAt > expiry;
+
+  if (spotifyExpired) {
+    delete req.session.spotifyAccessToken;
+    delete req.session.spotifyAccessTokenIssuedAt;
+  }
+
+  if (appleExpired) {
+    delete req.session.appleUserToken;
+    delete req.session.appleUserTokenIssuedAt;
+  }
+
+  // Make flags available to all templates
+  res.locals.spotifyExpired = spotifyExpired;
+  res.locals.appleExpired = appleExpired;
+
+  if (req.session.user) {
+    req.session.user.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.user.apple_connected = !!req.session.appleUserToken;
+  }
+
+  next();
+});
+
+
+
 const upload = multer();
 
 const auth = (req, res, next) => {
@@ -162,8 +199,6 @@ app.get('/spotify-callback', async (req, res) => {
 
   try {
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-      // added date/time stamp to auth flow
-      // TODO add time stamp to Oath for spotify
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -180,6 +215,8 @@ app.get('/spotify-callback', async (req, res) => {
     const accessToken = tokenData.access_token;
 
     req.session.spotifyAccessToken = accessToken;
+    // added date/time stamp to auth flow
+    req.session.spotifyAccessTokenIssuedAt = Date.now();
     req.session.user = {
       ...req.session.user,
       spotify_connected: true
