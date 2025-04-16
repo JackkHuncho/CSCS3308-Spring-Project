@@ -98,6 +98,43 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  const now = Date.now();
+  // TESTING QUICK ExpiRE
+  // const expiry = 30 * 1000;
+  // NORMAL EXPIRE
+  const expiry = 30 * 60 * 1000;
+
+  const spotifyExpired = req.session.spotifyAccessTokenIssuedAt &&
+    now - req.session.spotifyAccessTokenIssuedAt > expiry;
+
+  const appleExpired = req.session.appleUserTokenIssuedAt &&
+    now - req.session.appleUserTokenIssuedAt > expiry;
+
+  if (spotifyExpired) {
+    delete req.session.spotifyAccessToken;
+    delete req.session.spotifyAccessTokenIssuedAt;
+  }
+
+  if (appleExpired) {
+    delete req.session.appleUserToken;
+    delete req.session.appleUserTokenIssuedAt;
+  }
+
+  // Make flags available to all templates
+  res.locals.spotifyExpired = spotifyExpired;
+  res.locals.appleExpired = appleExpired;
+
+  if (req.session.user) {
+    req.session.user.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.user.apple_connected = !!req.session.appleUserToken;
+  }
+
+  next();
+});
+
+
+
 const upload = multer();
 
 const auth = (req, res, next) => {
@@ -131,6 +168,8 @@ app.get('/apple-token', (req, res) => {
 app.post('/apple-user-token', (req, res) => {
   const { userToken } = req.body;
   req.session.appleUserToken = userToken;
+  // added date/time stamp to auth flow
+  req.session.appleUserTokenIssuedAt = Date.now();
   req.session.user = {
     ...req.session.user,
     apple_connected: true
@@ -176,6 +215,8 @@ app.get('/spotify-callback', async (req, res) => {
     const accessToken = tokenData.access_token;
 
     req.session.spotifyAccessToken = accessToken;
+    // added date/time stamp to auth flow
+    req.session.spotifyAccessTokenIssuedAt = Date.now();
     req.session.user = {
       ...req.session.user,
       spotify_connected: true
@@ -340,7 +381,11 @@ app.post('/login', async (req, res) => {
     }
 
     user.pfp = `/pfp/${user.username}`;
-    req.session.user = user;
+    req.session.user = {
+      user,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
     req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
     console.error('Login Error:', err);
@@ -401,7 +446,11 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
     );
 
     updatedUser.pfp = `/pfp/${updatedUser.username}`;
-    req.session.user = updatedUser;
+    req.session.user = {
+      updatedUser,
+      spotify_connected: !!req.session.spotifyAccessToken,
+      apple_connected: !!req.session.appleUserToken
+    };
 
     res.render('pages/settings', {
       user: req.session.user,
