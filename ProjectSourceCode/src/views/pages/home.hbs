@@ -88,6 +88,21 @@
   .convert-button:hover {
     background-color: #ddd;
   }
+
+  .like-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: #eee;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px;
+    }
+
+    .liked {
+      background-color: #ff4d4d;
+      color: white;
+    }
 </style>
 
 {{#if message}}
@@ -127,8 +142,7 @@
       <div class="playlist-card">
         <h5>{{title}}</h5>
         <p>{{caption}}</p>
-        {{> likeButton }}
-        {{#if applelink}}
+        <button class="like-btn" data-count="0">❤️ Like (<span class="like-count">0</span>)</button>        {{#if applelink}}
         {{!-- <a href="{{applelink}}" target="_blank">Apple Music</a> --}}
                   <iframe style="border-radius:12px"
                   src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490"
@@ -241,7 +255,7 @@
         alert(data.message || "Failed to post playlist.");
       }
     });
-    
+
     const likeButtons = document.querySelectorAll('.like-btn');
 
     likeButtons.forEach(button => {
