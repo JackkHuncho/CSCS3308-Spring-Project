@@ -239,6 +239,63 @@ app.get('/pfp/:username', async (req, res) => {
   }
 });
 
+app.get('/personalPlaylists', async(req, res) => {
+  const userID = req.query.userID;
+
+  try {
+    const playlistsIDs = await db.any('SELECT post_id FROM users_to_posts WHERE user_id = $1', [userID]);
+    if (!playlistsIDs) {
+      return res.status(404).send('No Playlists IDs Found');
+    }
+
+    res.json(playlistsIDs);
+  } catch(err) {
+    console.error('Error retrieving playlist IDs:', err);
+    res.status(500).send('Error retrieving playlist IDs');
+  }
+});
+
+app.get('/playlistInfo', async(req, res) => {
+  const postID = req.query.postID;
+  
+  try {
+    const title = await db.oneOrNone('SELECT title FROM posts WHERE id = $1', [postID]);
+    if (!title) {
+      return res.status(404).send('No Playlist Info Found');
+    }
+
+    const playlistInfo = {
+      title: title
+    };
+  
+
+    // Read the partial template from file
+    const partialTemplate = fs.readFileSync('views/partials/playlistPreview.hbs', 'utf8');
+
+    // Compile and render the partial
+    const template = handlebars.compile(partialTemplate);
+    const html = template(playlistInfo);  // The context can be any object with the data you want to inject
+    
+    res.send(html);  // Send the compiled HTML to the client
+  } catch(err) {
+    console.error('Error retrieving playlist info:', err);
+    res.status(500).send('Error retrieving playlist info');
+  }
+  // const postID = req.query.postID;
+
+  // try {
+  //   const title = await db.oneOrNone('SELECT title FROM posts WHERE id = $1', [postID]);
+  //   if (!title) {
+  //     return res.status(404).send('No Playlist Info Found');
+  //   }
+
+  //   res.json(title);
+  // } catch(err) {
+  //   console.error('Error retrieving playlist info:', err);
+  //   res.status(500).send('Error retrieving playlist info');
+  // }
+});
+
 // =================== POST ROUTES ===================
 
 app.post('/register', async (req, res) => {
