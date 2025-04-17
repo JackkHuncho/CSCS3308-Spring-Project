@@ -1,0 +1,50 @@
+TA Meeting 4/17
+
+
+Renner went over the project board
+ - Mainly done except for some issues we ran into
+ - Kendrix mentioned we can go from Spotify -> Apple but not the other way
+ - Need a work around for Apple's case
+
+Ian goes over what we each did this week
+
+Shane
+ - CrossTune logo in top left
+ - Apple Embed now works + adjustment to posts to fit Apple embed
+ - Added ability to go to other people's profiles and see their prior posts
+ - Username + Pfp of original posster shows up on post
+ - Condensed playlist link form to one link
+ - Connected feature to Spotify and Apple Music
+
+Renner
+ - OAuth reset timer
+ - Fixed being able to log in b/c Spotify and Apple has an expiration
+  - So need a timer that makes you relogin
+ - Authentication for Apple Music and Spotify onto settings page
+
+Kendrix
+ - Authentication for Apple Music and Spotify
+ - Cross Tune button for posts
+  - Checks if you're Spotify/Apple to see whether it needs to convert or just add the playlist
+  - Spotify and Apple already have their own adds so onoly need to convert for the other platform
+ - Ian mentioned that a new account should remove a token (scope to user)
+  - Need to look into ^
+
+James
+ - Worked on UserID to PostID
+ - Planning on working on Profile updates
+ - Planning on working on homepage filtering/tailored experience/sorted
+
+What we're going to do
+
+Kendrix
+ - Fix the table to fix a bug for conversions
+
+Renner
+ - Tokens scope to the user
+
+James
+ - Homepage filtering/tailored experience/sorted
+
+Shane
+ - Profile page live update + post (front-end fixes)
