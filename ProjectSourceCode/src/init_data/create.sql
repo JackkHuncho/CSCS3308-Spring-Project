@@ -1,6 +1,15 @@
-CREATE TABLE users (id SERIAL PRIMARY KEY, username VARCHAR(100) NOT NULL, password VARCHAR(100) NOT NULL, pfp BYTEA, bio VARCHAR(200));
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY, 
+  username VARCHAR(100) NOT NULL, 
+  password VARCHAR(100) NOT NULL, 
+  pfp BYTEA, 
+  bio VARCHAR(200)
+);
 
-CREATE TABLE users_to_posts(user_id INT NOT NULL, post_id INT NOT NULL);
+CREATE TABLE users_to_posts(
+  user_id INT NOT NULL, 
+  post_id INT NOT NULL
+);
 
 DROP TABLE IF EXISTS posts;
 
