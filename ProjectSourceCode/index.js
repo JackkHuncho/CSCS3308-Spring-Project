@@ -478,11 +478,15 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
     );
 
     updatedUser.pfp = `/pfp/${updatedUser.username}`;
-    req.session.user = {
-      updatedUser,
-      spotify_connected: !!req.session.spotifyAccessToken,
-      apple_connected: !!req.session.appleUserToken
-    };
+
+    req.session.user = user;
+    req.session.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.apple_connected = !!req.session.appleUserToken;
+    // req.session.user = {
+     // updatedUser,
+     // spotify_connected: !!req.session.spotifyAccessToken,
+    //  apple_connected: !!req.session.appleUserToken
+    // };
 
     res.render('pages/settings', {
       user: req.session.user,
