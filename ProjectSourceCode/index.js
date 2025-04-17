@@ -60,7 +60,7 @@ const hbs = handlebars.create({
 
 
 const dbConfig = {
-  host: process.env.DATABSE_URL,
+  host: process.env.DATABASE_URL,
   port: 5432,
   database: process.env.POSTGRES_DB,
   user: process.env.POSTGRES_USER,
