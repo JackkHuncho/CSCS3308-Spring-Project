@@ -4,9 +4,7 @@
     height: 40px;
     width: 200px;
     border-radius: 10px;
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 30px;
+    margin: 0 auto 30px auto;
   }
 
   #popup {
@@ -20,7 +18,8 @@
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     text-align: center;
-    width: 320px;
+    width: 90%;
+    max-width: 320px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -36,34 +35,36 @@
     visibility: hidden;
   }
 
-  #playlistForm input, #playlistForm button {
-    padding: 8px;
+  #playlistForm input,
+  #playlistForm button {
+    padding: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
     width: 100%;
   }
 
+  .playlist-card {
+    background: #224489;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    margin: 0 auto 50px auto;
+    width: 90%;
+    max-width: 800px;
+    box-shadow: -10px 10px 5px rgb(0 0 0 / 20%);
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  }
+
   .playlist-card h4,
   .playlist-card p,
-  .playlist-card a {
+  .playlist-card a,
+  .playlist-card h5 {
     color: white;
   }
 
   .playlist-card h5 {
-    color: white;
     font-weight: bold;
-  }
-
-  .playlist-card {
-    background: #224489;
-    border-radius: 10px;
-    display: grid;
-    padding: 20px;
-    margin-left: 300px;
-    margin-right: 300px;
-    margin-bottom: 50px;
-    box-shadow: -10px 10px 5px rgb(0 0 0 / 20%);
-    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
   }
 
   .fade-in {
@@ -90,6 +91,64 @@
   .convert-button:hover {
     background-color: #ddd;
   }
+
+  .playlist-card iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block;
+    margin: 0 auto;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+  }
+
+  .spotify-wrapper {
+    width: 100%;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .spotify-wrapper iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block;
+    border: none;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .playlist-card {
+      padding: 15px;
+    }
+
+    .playlist-card iframe {
+      height: 450px;
+    }
+
+    .spotify-post {
+      max-width: 360px;
+    }
+
+    .playlist-card > div {
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      gap: 10px;
+    }
+
+    .playlist-card img {
+      width: 40px !important;
+      height: 40px !important;
+    }
+
+    #popup {
+      padding: 15px;
+    }
+
+    #openPopup {
+      width: 90%;
+    }
+  }
 </style>
 
 {{#if message}}
@@ -115,36 +174,40 @@
 
   <div id="postsContainer">
     {{#each posts}}
-      <div class="playlist-card">
+      <div class="playlist-card {{#if spotlink}}spotify-post{{/if}}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <div>
             <h5>{{title}}</h5>
             <p>{{caption}}</p>
           </div>    
-            <a href="/user/{{username}}" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
-              <span style="color: white; font-weight: bold;">{{username}}</span>
-              <img src="{{pfp}}" alt="{{username}}'s profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
-            </a>
+          <a href="/user/{{username}}" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+            <span style="color: white; font-weight: bold;">{{username}}</span>
+            <img src="{{pfp}}" alt="{{username}}'s profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+          </a>
         </div>
 
         {{#if applelink}}
-          <iframe style="border-radius:12px"
-                  src="{{convertToEmbed applelink}}"
-                  width="100%" height="450" frameBorder="0"
-                  allowfullscreen
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy">
+          <iframe
+            src="{{convertToEmbed applelink}}"
+            height="450"
+            frameBorder="0"
+            allowfullscreen
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy">
           </iframe>
         {{/if}}
 
         {{#if spotlink}}
-          <iframe style="border-radius:12px"
-                  src="{{convertToEmbed spotlink}}"
-                  width="100%" height="450" frameBorder="0"
-                  allowfullscreen
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy">
-          </iframe>
+          <div class="spotify-wrapper">
+            <iframe
+              src="{{convertToEmbed spotlink}}"
+              height="450"
+              frameBorder="0"
+              allowfullscreen
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy">
+            </iframe>
+          </div>
         {{/if}}
 
         <button class="convert-button">Add Playlist</button>
@@ -199,7 +262,7 @@
           : null;
 
         const container = document.createElement("div");
-        container.className = "playlist-card fade-in";
+        container.className = "playlist-card fade-in" + (data.post.spotLink ? " spotify-post" : "");
         container.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div>
@@ -213,13 +276,15 @@
           </div>
           ${musicLink ? `<a href="${musicLink}" target="_blank">${musicLink.includes('spotify') ? 'Spotify' : 'Apple Music'}</a><br>` : ""}
           ${embedUrl ? `
-            <iframe style="border-radius:12px"
-                    src="${embedUrl}"
-                    width="100%" height="152" frameBorder="0"
-                    allowfullscreen
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy">
-            </iframe>` : ""}
+            <div class="spotify-wrapper">
+              <iframe style="border-radius:12px"
+                      src="${embedUrl}"
+                      width="100%" height="152" frameBorder="0"
+                      allowfullscreen
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy">
+              </iframe>
+            </div>` : ""}
           <button class="convert-button">Add to my Playlist</button>
         `;
 

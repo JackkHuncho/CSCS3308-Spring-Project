@@ -288,12 +288,31 @@ app.get('/settings', (req, res) => {
   res.render('pages/settings', { user: req.session.user });
 });
 
-app.get('/profile', (req, res) => {
+app.get('/profile', async (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login');
   }
-  res.render('pages/profile', { user: req.session.user });
+
+  try {
+    const posts = await db.any(
+      'SELECT * FROM posts WHERE username = $1 ORDER BY id DESC',
+      [req.session.user.username]
+    );
+
+    res.render('pages/profile', {
+      user: req.session.user,
+      posts: posts
+    });
+  } catch (err) {
+    console.error('Error loading profile posts:', err);
+    res.render('pages/profile', {
+      user: req.session.user,
+      posts: [],
+      message: 'Error loading posts'
+    });
+  }
 });
+
 
 app.get('/pfp/:username', async (req, res) => {
   const { username } = req.params;
