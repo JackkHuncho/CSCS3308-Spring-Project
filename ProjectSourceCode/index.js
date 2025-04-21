@@ -239,6 +239,34 @@ app.get('/pfp/:username', async (req, res) => {
   }
 });
 
+app.get('/upvotedPosts', async (req, res) => {
+  const userID = req.query.userID;
+
+  try {
+    const upvoted = await db.any(
+      'SELECT post_id FROM users_to_upvotes WHERE user_id = $1',
+      [userID]
+    );
+
+    const upvotedIDs = upvoted.map(row => row.post_id);
+    res.json({ upvotedIDs });
+  } catch (err) {
+    console.error('Error loading upvoted posts:', err);
+    res.status(500).json({ error: 'Failed to load upvoted posts' });
+  }
+});
+
+app.get('/postsWithUpvotes', async (req, res) => {
+  try {
+    const posts = await db.any('SELECT id, title, upvotes FROM posts');
+    res.json({ posts });
+  } catch (err) {
+    console.error('Error fetching posts:', err);
+    res.status(500).json({ error: 'Failed to load posts' });
+  }
+});
+
+
 // =================== POST ROUTES ===================
 
 app.post('/register', async (req, res) => {
@@ -388,6 +416,55 @@ app.post('/idConversion', async (req, res) => {
   } catch (err) {
     console.error('ID conversion error:', err);
     res.status(500).json({ success: false, message: 'Database error while creating post.' });
+  }
+});
+
+app.post('/upvote', async (req, res) => {
+  const { postID, userID } = req.body;
+
+  try {
+    // Check if the user already upvoted this post
+    const alreadyUpvoted = await db.oneOrNone(
+      'SELECT * FROM users_to_upvotes WHERE user_id = $1 AND post_id = $2',
+      [userID, postID]
+    );
+
+    let newUpvoteCount;
+
+    if (alreadyUpvoted) {
+      // If already upvoted, remove the upvote
+      await db.none(
+        'DELETE FROM users_to_upvotes WHERE user_id = $1 AND post_id = $2',
+        [userID, postID]
+      );
+
+      // Decrease the upvote count
+      const result = await db.one(
+        'UPDATE posts SET upvotes = upvotes - 1 WHERE id = $1 RETURNING upvotes',
+        [postID]
+      );
+
+      newUpvoteCount = result.upvotes;
+    } else {
+      // Not upvoted yet – insert the upvote
+      await db.none(
+        'INSERT INTO users_to_upvotes (user_id, post_id) VALUES ($1, $2)',
+        [userID, postID]
+      );
+
+      // Increase the upvote count
+      const result = await db.one(
+        'UPDATE posts SET upvotes = upvotes + 1 WHERE id = $1 RETURNING upvotes',
+        [postID]
+      );
+
+      newUpvoteCount = result.upvotes;
+    }
+
+    res.json({ newUpvoteCount, upvoted: !alreadyUpvoted });
+  } catch (err) {
+    console.error('Error toggling upvote:', err);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 

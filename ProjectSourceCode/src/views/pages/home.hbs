@@ -89,20 +89,21 @@
     background-color: #ddd;
   }
 
-  .like-btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #eee;
-      cursor: pointer;
-      font-size: 16px;
-      margin: 10px;
-    }
+  .upvote-btn {
+  background: #f0f0f0;
+  color: #333;
+  border: none;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
 
-    .liked {
-      background-color: #ff4d4d;
-      color: white;
-    }
+.upvote-btn.upvoted {
+  background: #4caf50;
+  color: white;
+}
 </style>
 
 {{#if message}}
@@ -142,7 +143,8 @@
       <div class="playlist-card">
         <h5>{{title}}</h5>
         <p>{{caption}}</p>
-        <button class="like-btn" data-count="0">❤️ Like (<span class="like-count">0</span>)</button>        {{#if applelink}}
+        <button class="upvote-btn" data-id="{{id}}">⬆️ Upvote (<span class="upvote-count">0</span>)</button>        
+        {{#if applelink}}
         {{!-- <a href="{{applelink}}" target="_blank">Apple Music</a> --}}
                   <iframe style="border-radius:12px"
                   src="https://embed.music.apple.com/us/album/magical-mystery-tour/1441163490"
@@ -256,23 +258,51 @@
       }
     });
 
-    const likeButtons = document.querySelectorAll('.like-btn');
+    document.addEventListener('DOMContentLoaded', async () => {
+      const userID = {{ user.id }};
 
-    likeButtons.forEach(button => {
-      let liked = false;
+      try {
+        const postRes = await fetch('/postsWithUpvotes');
+        const postData = await postRes.json();
 
-      button.addEventListener('click', () => {
-        liked = !liked;
+        const upvotedRes = await fetch(`/upvotedPosts?userID=${userID}`);
+        const upvotedData = await upvotedRes.json();
+        const upvotedIDs = upvotedData.upvotedIDs;
 
-        const countSpan = button.querySelector('.like-count');
-        let count = parseInt(button.getAttribute('data-count'));
+        document.querySelectorAll('.upvote-btn').forEach(button => {
+          const postID = parseInt(button.getAttribute('data-id'), 10);
+          const postInfo = postData.posts.find(post => post.id === postID);
 
-        count += liked ? 1 : -1;
-        button.setAttribute('data-count', count);
-        countSpan.textContent = count;
+          if (postInfo) {
+            const countSpan = button.querySelector('.upvote-count');
+            countSpan.textContent = postInfo.upvotes;
 
-        button.classList.toggle('liked', liked);
-      });
+            if (upvotedIDs.includes(postID)) {
+              button.classList.add('upvoted');
+            } else {
+              button.classList.remove('upvoted');
+            }
+          }
+
+          // Add click handler if not already
+          button.addEventListener('click', async () => {
+            const res = await fetch('/upvote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ postID, userID })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+              const countSpan = button.querySelector('.upvote-count');
+              countSpan.textContent = data.newUpvoteCount;
+              button.classList.toggle('upvoted', data.upvoted);
+            }
+          });
+        });
+      } catch (err) {
+        console.error('Error loading upvotes:', err);
+      }
     });
   </script>
 {{else}}
