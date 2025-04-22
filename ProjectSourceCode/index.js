@@ -621,11 +621,11 @@ app.post('/convert-playlist', async (req, res) => {
 
 
       // 2) Create Apple Music playlist in user’s library
-       newPlaylistId = await createAppleMusicPlaylist(
-           devToken,
-           userToken,
-          spotifyMeta.name
-         );
+      newPlaylistId = await createAppleMusicPlaylist(
+        appleMusicDeveloperToken,
+        appleMusicUserToken,
+        spotifyMeta.name
+      );
 
       // 3) Search & add each track to Apple Music
       for (const track of spotifyTracks) {
@@ -931,9 +931,7 @@ async function addTrackToSpotifyPlaylist(playlistId, trackUri, accessToken) {
 // 1) Create a new Apple Music playlist
 async function createAppleMusicPlaylist(devToken, userToken, name) {
   const url = 'https://api.music.apple.com/v1/me/library/playlists';
-  const body = {
-    attributes: { name, description: 'Converted from Spotify' }
-  };
+  const body = { attributes: { name, description: 'Converted from Spotify' } };
 
   const resp = await fetch(url, {
     method: 'POST',
@@ -946,12 +944,15 @@ async function createAppleMusicPlaylist(devToken, userToken, name) {
   });
 
   if (!resp.ok) {
-    throw new Error('Failed to create Apple Music playlist');
+    const errText = await resp.text();
+    console.error('Apple Music create playlist failed:', resp.status, errText);
+    throw new Error(`Apple create failed: ${resp.status} ${errText}`);
   }
 
   const data = await resp.json();
   return data.data?.[0]?.id;
 }
+
 
 // 2) Fetch tracks from a user’s library playlist
 async function fetchAppleMusicPlaylistTracks(playlistId, devToken, userToken, storefront) {
