@@ -92,14 +92,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/css', express.static(path.join(__dirname, 'src/resources/css')));
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    saveUninitialized: false,
-    resave: false,
-  })
-);
-
 app.use((req, res, next) => {
   const now = Date.now();
   // TESTING QUICK ExpiRE
