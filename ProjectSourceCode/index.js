@@ -605,13 +605,27 @@ app.post('/convert-playlist', async (req, res) => {
       }
 
       // 1) Fetch tracks from Spotify (public) using client credentials
-      const spotifyTracks = await fetchSpotifyPlaylistTracks(spotifyPlaylistId);
+      // get the token once
+    const spotifyClientCredentialsToken = await getSpotifyClientCredentialsToken();
+
+    // then reuse it for both calls if you want
+  const spotifyTracks = await fetchSpotifyPlaylistTracks(spotifyPlaylistId);
+  const spotifyMeta = await fetch(
+   `https://api.spotify.com/v1/playlists/${spotifyPlaylistId}`,
+    {
+    headers: {
+      Authorization: `Bearer ${spotifyClientCredentialsToken}`
+    }
+  }
+).then(r => r.json());
+
 
       // 2) Create Apple Music playlist in user’s library
-      newPlaylistId = await createAppleMusicPlaylist(
-        appleMusicDeveloperToken,
-        appleMusicUserToken
-      );
+       newPlaylistId = await createAppleMusicPlaylist(
+           devToken,
+           userToken,
+          spotifyMeta.name
+         );
 
       // 3) Search & add each track to Apple Music
       for (const track of spotifyTracks) {
@@ -630,65 +644,52 @@ app.post('/convert-playlist', async (req, res) => {
           );
         }
       }
-    } else {
-      // =============== APPLE MUSIC → SPOTIFY ===============
 
-      // We only need a Spotify user token to create a playlist in their Spotify account
-      // For reading Apple Music:
-      //   - If it's a user’s library playlist -> need Apple user token
-      //   - If it's a public “catalog” playlist -> only dev token needed
-      if (!appleMusicDeveloperToken || !spotifyAccessToken) {
-        return res
-          .status(400)
-          .json({ error: 'Missing Apple Dev token or Spotify user token.' });
-      }
+} else {
+  // → APPLE MUSIC → SPOTIFY via ISRCs
+  if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
+    return res.status(400).json({
+      error:
+        "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
+    });
+  }
 
-      // Identify the Apple playlist ID
-      const applePlaylistId = extractAppleMusicPlaylistId(link);
-      if (!applePlaylistId) {
-        return res
-          .status(400)
-          .json({ error: 'Could not parse Apple Music playlist ID from link.' });
-      }
+  const applePlaylistId = extractAppleMusicPlaylistId(link);
+  if (!applePlaylistId) {
+    return res
+      .status(400)
+      .json({ error: "Could not parse Apple Music playlist ID." });
+  }
 
-      // Check if it's a "catalog" (public) or user library link
-      const isCatalog = isAppleMusicCatalogLink(link); 
-      // We'll define a simple helper to guess
-      let appleTracks;
+  // 1) Fetch all ISRCs from the Apple playlist
+  const isrcs = await fetchCatalogPlaylistIsrcs(
+    applePlaylistId,
+    process.env.APPLE_MUSIC_DEV_TOKEN,
+    storefront
+  );
 
-      if (isCatalog) {
-        // fetch from Apple Music "catalog" with only dev token
-        appleTracks = await fetchPublicAppleMusicPlaylistTracks(
-          applePlaylistId,
-          appleMusicDeveloperToken,
-          storefront
-        );
-      } else {
-        // user’s library playlist => need Apple user token
-        if (!appleMusicUserToken) {
-          return res.status(400).json({
-            error: 'Apple Music user token required for library playlist.',
-          });
-        }
-        appleTracks = await fetchAppleMusicPlaylistTracks(
-          applePlaylistId,
-          appleMusicDeveloperToken,
-          appleMusicUserToken,
-          storefront
-        );
-      }
+  // 2) Create a new (empty) Spotify playlist
+  const newSpotifyPlaylistId = await createSpotifyPlaylist(
+    spotifyAccessToken
+  );
 
-      // 2) Create new Spotify playlist in user's account
-      newPlaylistId = await createSpotifyPlaylist(spotifyAccessToken);
+  // 3) Match ISRCs → Spotify URIs
+  const uris = await matchIsrcsToSpotifyUris(
+    isrcs,
+    spotifyAccessToken
+  );
 
-      // 3) Search & add each Apple track on Spotify
-      for (const track of appleTracks) {
-        const spotifyTrackUri = await searchSpotifyTrackUri(track, spotifyAccessToken);
-        if (spotifyTrackUri) {
-          await addTrackToSpotifyPlaylist(newPlaylistId, spotifyTrackUri, spotifyAccessToken);
-        }
-      }
-    }
+  // 4) Add them in bulk
+  await addUrisToSpotifyPlaylist(
+    newSpotifyPlaylistId,
+    uris,
+    spotifyAccessToken
+  );
+
+  newPlaylistId = newSpotifyPlaylistId;
+}
+// … then finally res.json({ newPlaylistId, message: 'Done!' }) …
+
 
     // Send response
     res.status(200).json({
@@ -704,6 +705,88 @@ app.post('/convert-playlist', async (req, res) => {
 // *****************************************************
 // <!-- Section 7 : HELPER FUNCTIONS -->
 // *****************************************************
+
+// ========== ISRC WORKAROUND HELPERS ==========
+
+// ——— Fetch ISRCs from a public Apple Music catalog playlist ———
+async function fetchCatalogPlaylistIsrcs(playlistId, devToken, storefront) {
+  let isrcs = [];
+  let url = `https://api.music.apple.com/v1/catalog/${storefront}/playlists/${playlistId}/tracks?limit=100`;
+
+  while (url) {
+    const resp = await fetch(url, {
+      headers: { Authorization: `Bearer ${devToken}` },
+    });
+    if (!resp.ok) {
+      throw new Error(`Apple Music catalog fetch failed: ${resp.status}`);
+    }
+    const data = await resp.json();
+
+    // collect ISRCs
+    data.data.forEach(item => {
+      const isrc = item.attributes?.isrc;
+      if (isrc) isrcs.push(isrc);
+    });
+
+    // normalize next URL to absolute
+    if (data.next) {
+      url = new URL(data.next, 'https://api.music.apple.com').href;
+    } else {
+      url = null;
+    }
+  }
+
+  return isrcs;
+}
+
+
+// ——— Match ISRCs → Spotify URIs ———
+async function matchIsrcsToSpotifyUris(isrcs, accessToken) {
+  const uris = [];
+  for (const isrc of isrcs) {
+    const resp = await fetch(
+      `https://api.spotify.com/v1/search?type=track&limit=1&q=isrc:${isrc}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!resp.ok) {
+      console.warn(`Spotify ISRC search failed for ${isrc}: ${resp.status}`);
+      continue;
+    }
+    const results = await resp.json();
+    const track = results.tracks.items[0];
+    if (track) {
+      uris.push(track.uri);
+    } else {
+      console.warn(`No Spotify match for ISRC ${isrc}`);
+    }
+  }
+  return uris;
+}
+
+// ——— Add URIs to a Spotify playlist in 100‑item batches ———
+async function addUrisToSpotifyPlaylist(playlistId, uris, accessToken) {
+  for (let i = 0; i < uris.length; i += 100) {
+    const batch = uris.slice(i, i + 100);
+    const resp = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ uris: batch }),
+      }
+    );
+    if (!resp.ok) {
+      console.warn(`Failed to add batch to Spotify playlist: ${resp.status}`);
+    }
+  }
+}
+
+
+
+// ======================================
 
 // 1) Distinguish "catalog" vs. "library" for Apple Music
 function isAppleMusicCatalogLink(link) {
@@ -752,7 +835,7 @@ async function getSpotifyClientCredentialsToken() {
   return data.access_token; // 1-hour token
 }
 
-// ========== Spotify Helpers ==========
+// ========== Spotify Helpers ========== 
 
 // Fetch tracks from a public Spotify playlist using client credentials
 async function fetchSpotifyPlaylistTracks(playlistId) {
@@ -787,7 +870,7 @@ async function createSpotifyPlaylist(accessToken) {
   const body = {
     name: 'Converted from Apple Music',
     public: false,
-    description: 'Auto-created by our conversion tool',
+    description: 'Your Crosstuned Playlist',
   };
 
   const resp = await fetch(url, {
@@ -846,13 +929,10 @@ async function addTrackToSpotifyPlaylist(playlistId, trackUri, accessToken) {
 // ========== Apple Music Helpers ==========
 
 // 1) Create a new Apple Music playlist
-async function createAppleMusicPlaylist(devToken, userToken) {
+async function createAppleMusicPlaylist(devToken, userToken, name) {
   const url = 'https://api.music.apple.com/v1/me/library/playlists';
   const body = {
-    attributes: {
-      name: '',
-      description: 'Auto-created by our conversion tool',
-    },
+    attributes: { name, description: 'Converted from Spotify' }
   };
 
   const resp = await fetch(url, {
