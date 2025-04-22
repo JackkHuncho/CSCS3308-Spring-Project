@@ -60,7 +60,7 @@ const hbs = handlebars.create({
 
 
 const dbConfig = {
-  host: 'db',
+  host: process.env.DATABASE_URL,
   port: 5432,
   database: process.env.POSTGRES_DB,
   user: process.env.POSTGRES_USER,
@@ -288,12 +288,31 @@ app.get('/settings', (req, res) => {
   res.render('pages/settings', { user: req.session.user });
 });
 
-app.get('/profile', (req, res) => {
+app.get('/profile', async (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login');
   }
-  res.render('pages/profile', { user: req.session.user });
+
+  try {
+    const posts = await db.any(
+      'SELECT * FROM posts WHERE username = $1 ORDER BY id DESC',
+      [req.session.user.username]
+    );
+
+    res.render('pages/profile', {
+      user: req.session.user,
+      posts: posts
+    });
+  } catch (err) {
+    console.error('Error loading profile posts:', err);
+    res.render('pages/profile', {
+      user: req.session.user,
+      posts: [],
+      message: 'Error loading posts'
+    });
+  }
 });
+
 
 app.get('/pfp/:username', async (req, res) => {
   const { username } = req.params;
@@ -409,11 +428,10 @@ app.post('/login', async (req, res) => {
     }
 
     user.pfp = `/pfp/${user.username}`;
-    req.session.user = {
-      user,
-      spotify_connected: !!req.session.spotifyAccessToken,
-      apple_connected: !!req.session.appleUserToken
-    };
+    req.session.user = user;
+    req.session.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.apple_connected = !!req.session.appleUserToken;
+
     req.session.save(() => res.status(200).redirect('/home'));
   } catch (err) {
     console.error('Login Error:', err);
@@ -479,11 +497,15 @@ app.post('/settings', upload.single('pfp'), async (req, res) => {
     );
 
     updatedUser.pfp = `/pfp/${updatedUser.username}`;
-    req.session.user = {
-      updatedUser,
-      spotify_connected: !!req.session.spotifyAccessToken,
-      apple_connected: !!req.session.appleUserToken
-    };
+
+    req.session.user = user;
+    req.session.spotify_connected = !!req.session.spotifyAccessToken;
+    req.session.apple_connected = !!req.session.appleUserToken;
+    // req.session.user = {
+     // updatedUser,
+     // spotify_connected: !!req.session.spotifyAccessToken,
+    //  apple_connected: !!req.session.appleUserToken
+    // };
 
     res.render('pages/settings', {
       user: req.session.user,
@@ -508,6 +530,7 @@ app.post('/posts', async (req, res) => {
   }
 
   try {
+    console.log(req.session.user);
     const duration = 0;
     const username = req.session.user.username;
     const pfp = req.session.user.pfp;
@@ -947,4 +970,5 @@ async function addSongToAppleMusicPlaylist(playlistId, songId, devToken, userTok
 // *****************************************************
 // <!-- Section 8 : Start Server -->
 // *****************************************************
+
 module.exports = app.listen(3000, () => console.log('Server is listening on port 3000'));
