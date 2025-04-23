@@ -182,7 +182,8 @@ app.post('/apple-user-token', (req, res) => {
 // --- Spotify Auth Redirect
 app.get('/connect-spotify', (req, res) => {
   const { SPOTIFY_CLIENT_ID } = process.env;
-  const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
+  //const redirectUri = 'http://localhost:3000/spotify-callback?from=settings';
+  const redirectUri = 'http://crosstune.onrender.com/spotify-callback?from=settings';
   const scope =
     'playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public';
 
@@ -214,7 +215,8 @@ app.get('/spotify-callback', async (req, res) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: 'http://localhost:3000/spotify-callback?from=settings',
+        //redirect_uri: 'http://localhost:3000/spotify-callback?from=settings',
+        redirect_uri: 'http://crosstune.onrender.com/spotify-callback?from=settings',
       }),
     });
 
