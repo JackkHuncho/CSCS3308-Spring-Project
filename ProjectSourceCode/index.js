@@ -651,12 +651,12 @@ app.post('/convert-playlist', async (req, res) => {
 
 } else {
   // → APPLE MUSIC → SPOTIFY via ISRCs
-  if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
-    return res.status(400).json({
-      error:
-        "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
-    });
-  }
+  // if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
+  //   return res.status(400).json({
+  //     error:
+  //       "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
+  //   });
+  // }
 
   const applePlaylistId = extractAppleMusicPlaylistId(link);
   if (!applePlaylistId) {
