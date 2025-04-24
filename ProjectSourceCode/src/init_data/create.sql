@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS users_to_posts;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS posts;
+
 CREATE TABLE users (
   id SERIAL PRIMARY KEY, 
   username VARCHAR(100) NOT NULL, 
