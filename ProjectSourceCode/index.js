@@ -102,9 +102,6 @@ app.use(
 
 app.use((req, res, next) => {
   const now = Date.now();
-  // TESTING QUICK ExpiRE
-  // const expiry = 30 * 1000;
-  // NORMAL EXPIRE
   const expiry = 30 * 60 * 1000;
 
   const spotifyExpired = req.session.spotifyAccessTokenIssuedAt &&
@@ -123,13 +120,13 @@ app.use((req, res, next) => {
     delete req.session.appleUserTokenIssuedAt;
   }
 
-  // Make flags available to all templates
   res.locals.spotifyExpired = spotifyExpired;
   res.locals.appleExpired = appleExpired;
 
   if (req.session.user) {
     req.session.user.spotify_connected = !!req.session.spotifyAccessToken;
     req.session.user.apple_connected = !!req.session.appleUserToken;
+    res.locals.user = req.session.user;
   }
 
   next();
@@ -649,12 +646,12 @@ app.post('/convert-playlist', async (req, res) => {
 
 } else {
   // → APPLE MUSIC → SPOTIFY via ISRCs
-  if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
-    return res.status(400).json({
-      error:
-        "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
-    });
-  }
+  // if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
+  //   return res.status(400).json({
+  //     error:
+  //       "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
+  //   });
+  // }
 
   const applePlaylistId = extractAppleMusicPlaylistId(link);
   if (!applePlaylistId) {
