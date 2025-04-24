@@ -16,5 +16,4 @@ CREATE TABLE posts (
   applelink VARCHAR(255),
   spotLink VARCHAR(255),
   upvotes INT DEFAULT 0
-  -- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
