@@ -260,6 +260,8 @@ app.get('/home', async (req, res) => {
     res.render('pages/home', {
       user: req.session.user,
       posts: posts,
+      isAppleConnected: !!req.session.appleUserToken,
+      isSpotifyConnected: !!req.session.spotifyAccessToken
     });
   } catch (err) {
     console.error('Error loading posts:', err);
@@ -595,7 +597,7 @@ app.post('/convert-playlist', async (req, res) => {
       if (!appleMusicDeveloperToken || !appleMusicUserToken) {
         return res
           .status(400)
-          .json({ error: 'Missing Apple Music developer token or user token.' });
+          // .json({ error: 'Missing Apple Music developer token or user token.' });
       }
 
       // Extract the Spotify playlist ID
@@ -649,12 +651,12 @@ app.post('/convert-playlist', async (req, res) => {
 
 } else {
   // → APPLE MUSIC → SPOTIFY via ISRCs
-  if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
-    return res.status(400).json({
-      error:
-        "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
-    });
-  }
+  // if (!process.env.APPLE_MUSIC_DEV_TOKEN || !req.session.spotifyAccessToken) {
+  //   return res.status(400).json({
+  //     error:
+  //       "Need both APPLE_MUSIC_DEV_TOKEN and a Spotify user token in session.",
+  //   });
+  // }
 
   const applePlaylistId = extractAppleMusicPlaylistId(link);
   if (!applePlaylistId) {
